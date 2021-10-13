@@ -97,14 +97,20 @@ if __name__ == "__main__":
         robostate = np.array(state.franka.get_sensors_offsets(), dtype=CMD_DTYPE)
         redis_send_states(state.redis_store, robostate)
 
+        try:
+            if state.franka.robot.get_previous_interval().end != -1:
+                print_and_cr("[WARNING] Custom Controller died")
+                print_and_cr("[WARNING] Resetting the robot")
+                state.mode = 'home'
+        except Exception as e:
+            print_and_cr("[ERROR] Unable to communicate with Polymetis server")
+            print_and_cr("[ERROR] Shutting down demo")
+            state.quit = True
+            break
+
         if state.print_state:
             print_and_cr(f"[INFO] Current state {robostate}")
             state.print_state = False
-
-        if state.franka.robot.get_previous_interval().end != -1:
-            print_and_cr("[WARNING] Custom Controller died")
-            print_and_cr("[WARNING] Resetting the robot")
-            state.mode = 'home'
 
         if state.mode == 'teleop':
             if step_counter % CMD_EVERY_ITER == 0:
