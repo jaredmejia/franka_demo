@@ -42,7 +42,7 @@ class State(object):
 def init_robot(ip_address):
     print_and_cr(f"[INFO] Try connecting to Franka robot at {ip_address} ...")
     franka = FrankaArm(name="Franka-Demo", ip_address=ip_address)
-    franka.robot.go_home()
+    franka.reset()
     franka.connect(policy=franka.default_policy(1.0, 1.0))
     print_and_cr(f"[INFO] Connected to Franka arm")
     redis_store = redis.Redis()
@@ -60,13 +60,13 @@ def redis_receive_command(redis_store):
 # ------------------------------------------------------------------------------
 # Example Functions
 
-def _press_home(key_pressed, state):
-    state.mode = 'home'
+def _press_reset(key_pressed, state):
+    state.mode = 'reset'
 
-def __cmd_home(state, timestamp):
+def __cmd_reset(state, timestamp):
     print_and_cr(f"[INFO] Resetting robot. Takes about 4 sec. Do not move ..")
     state.franka.reset()
-    print_and_cr(f"[INFO] Franka is at home, sending our controller")
+    print_and_cr(f"[INFO] Franka is reset, sending our controller")
     state.franka.connect(policy=state.franka.default_policy(1.0, 1.0))
     state.mode = 'idle'
     return None
@@ -77,10 +77,22 @@ def _press_print(key_pressed, state):
 def __cmd_idle(state, timestamp):
     return None
 
+def _press_help(key_pressed, state):
+    print_and_cr("Keypress Handlers:")
+    keys = sorted(state.handlers.keys())
+    for k in keys:
+        print_and_cr("\t%s - %s" % (k, state.handlers[k].__name__.replace("press","").replace("_", " ").strip()))
+    print_and_cr("Robot Modes:")
+    modes = sorted(state.modes.keys())
+    for m in modes:
+        print_and_cr("\t%s" % m)
+
+
 # ------------------------------------------------------------------------------
 
 def keyboard_proc(state):
     # Keyboard Interface, running on a separate thread
+    print_and_cr("[INFO] Accepting keyboard commands, press 'h' for help.")
     res = getch()
     while res != 'q' and not state.quit: # Press q to quit
         print_and_cr('')
@@ -99,9 +111,10 @@ def run_demo(callback_to_install_func=None, params={}):
     modes = {}      # Generate command depending on the mode
     onclose = []    # Clean up on closing the demo
 
-    handlers['h'] = _press_home
+    handlers['r'] = _press_reset
     handlers['p'] = _press_print
-    modes['home'] = __cmd_home
+    handlers['h'] = _press_help
+    modes['reset'] = __cmd_reset
     modes['idle'] = __cmd_idle
 
     state.handlers = handlers
@@ -133,7 +146,7 @@ def run_demo(callback_to_install_func=None, params={}):
                 if state.franka.robot.get_previous_interval().end != -1:
                     print_and_cr("[WARNING] Custom Controller died")
                     print_and_cr("[WARNING] Resetting the robot")
-                    state.mode = 'home'
+                    state.mode = 'reset'
             except Exception as e:
                 print_and_cr("[ERROR] Unable to communicate with Polymetis server")
                 print_and_cr("[ERROR] Shutting down demo")

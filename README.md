@@ -23,17 +23,16 @@ Demo codebase for interacting with the Franka Robot Arm.
 
 ## Add More Functions
 
-This demo interfaces launch two threads: a keyboard thread and a command thread.
+The core demo interfaces, `def run_demo` from `franka_demo.demo_interfaces`, launch two threads: a keyboard thread and a command thread.
 
 1. The keyboard thread subscribes to your key press at 100Hz. You can write custom
-handler to be invoked once a certain key is pressed. e.g. Press 'h' will set the
-robot to the "home" mode.
+handler to be invoked once a certain key is pressed. e.g. Press 'r' will put the robot on reset mode.
 
 2. The command thread publishes the robot sensor information at 200Hz and send
 command to the robot hardware at 40Hz. In order to send a command, it will check
 which mode the robot is in and invoke the corresponding mode command generator.
-For example, when the robot is in replay mode, its command generator will parse
-a log file to commands and send the command in sequence.
+For example, when the robot is in reset mode, its command generator resets the robot.
+When the robot is in replay mode, its command generator parses a log file to commands and send the command in sequence.
 
 3. To add a new function. Checkout `franka_demo/addon/teleop.py` to see how to
 write your own key press handler and mode command generator. To launch the demo
