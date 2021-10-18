@@ -4,6 +4,7 @@ from time import strftime, localtime, sleep
 import numpy as np
 
 from franka_demo.demo_interfaces import print_and_cr
+from franka_demo.addon import save_camdata_to_images
 
 def add_logging_function(state):
     state.handlers['l'] = _press_logging
@@ -30,28 +31,35 @@ def _press_logging(key_pressed, state):
     else:
         state.is_logging_to = os.path.join(
             state.log_folder,
-            strftime('%y-%m-%d-%H-%M-%S.csv', localtime())
+            strftime('%y-%m-%d-%H-%M-%S', localtime())
         )
+        os.mkdir(state.is_logging_to)
         Process(
             target=start_logging,
-            args=(state.is_logging_to, state.log_queue)).start()
+            args=(state.is_logging_to, state.log_queue,
+                  (state.cameras is not None))).start()
         print_and_cr(f"[LOGGING] Start logging to {state.is_logging_to}")
 
-def start_logging(fn, q):
-  file_handler = open(fn, 'a')
+def start_logging(folder_name, q, log_camera):
+  file_handler = open(os.path.join(folder_name, 'log.csv'), 'a')
+  idx = 0
   while True:
     new_items = q.get(block=True)
     if new_items is None:
         file_handler.close()
         return
-    for item in new_items:
+    for item in new_items[:-1]:
         if isinstance(item, np.ndarray):
             file_handler.write(np.array2string(item,
                 precision=8, separator=' ', max_line_width=9999)[1:-1])
         else:
             file_handler.write(str(item))
         file_handler.write(',')
+    # Last item is always the camera data
+    if log_camera:
+        save_camdata_to_images(new_items[-1], os.path.join(folder_name, str(idx)))
     file_handler.write('\n')
+    idx += 1
 
 def clear_log_queue_on_quit(state):
     state.log_queue.close()

@@ -11,11 +11,21 @@ CAM_HEIGHT = 480
 CAM_FPS = 30
 
 def add_camera_function(state):
-    state.realsense = RealSense()
+    state.cameras = RealSense()
     state.handlers['d'] = debug_save_images
 
 def debug_save_images(key_pressed, state):
-    state.realsense.save_images_to_file('debug')
+    ts = time.time()
+    for _ in range(100):
+        save_camdata_to_images(state.cameras.get_data(), 'debug')
+    print_and_cr(f"Took {time.time() - ts} sec to save 100 times")
+
+def save_camdata_to_images(cam_data, fn_prefix):
+    for i, (color_image, depth_image) in enumerate(cam_data):
+        color_im = Image.fromarray(color_image[:,:,::-1])
+        color_im.save(f"{fn_prefix}-cam{i}-color.tiff")
+        #depth_im = Image.fromarray(depth_image.astype(np.uint8))
+        #depth_im.save(f"{fn_prefix}-cam{i}-depth.png") # TODO verify uint8 / 16
 
 class RealSense:
     """ Wrapper that implements boilerplate code for RealSense cameras """
@@ -57,8 +67,13 @@ class RealSense:
 
     def _get_frames(self):
         raw_frames = [pipe.wait_for_frames() for pipe in self.pipes]
-        aligned_frames = [self.align.process(f) for f in raw_frames]
-        return aligned_frames
+        #aligned_frames = [self.align.process(f) for f in raw_frames]
+        #return aligned_frames # TODO use aligned frames
+        return raw_frames
+
+    def get_color_data(self):
+        framesets = self._get_frames()
+        return [np.asanyarray(frameset.get_color_frame().get_data()) for frameset in framesets]
 
     def get_data(self):
         framesets = self._get_frames()
@@ -70,11 +85,3 @@ class RealSense:
                 np.asanyarray(color_frame.get_data()),
                 np.asanyarray(depth_frame.get_data())))
         return data
-
-    def save_images_to_file(self, fn_prefix):
-        data = self.get_data()
-        for i, (color_image, depth_image) in enumerate(data):
-            color_im = Image.fromarray(color_image[:,:,::-1])
-            color_im.save(f"{fn_prefix}-cam{i}-color.jpeg")
-            depth_im = Image.fromarray(depth_image.astype(np.uint8))
-            depth_im.save(f"{fn_prefix}-cam{i}-depth.png")

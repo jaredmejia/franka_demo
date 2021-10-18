@@ -28,6 +28,7 @@ class State(object):
     def __init__(self, franka, redis_store):
         self.franka = franka
         self.redis_store = redis_store
+        self.cameras = None
         self.quit = False
         self.mode = 'idle'
         self._mutex = Lock() # Not in use
@@ -158,6 +159,8 @@ def run_demo(callback_to_install_func=None, params={}):
                 print_and_cr(f"[INFO] Current state {state.robostate}")
                 state.print_state = False
 
+            cam_data = state.cameras.get_data() if state.cameras else None
+
             current_mode = state.mode
             assert current_mode in state.mode_keys
             command = state.modes[current_mode](state, time())
@@ -167,8 +170,9 @@ def run_demo(callback_to_install_func=None, params={}):
 
             if state.is_logging_to:
                 state.log_queue.put((
-                    time(), state.robostate, command
+                    time(), state.robostate, command, cam_data
                 ))
+                #print_and_cr(str(time()))
 
         ts_counter += 1
         sleep_till = ts + ts_counter * period
