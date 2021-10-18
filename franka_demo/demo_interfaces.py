@@ -32,6 +32,7 @@ class State(object):
         self.mode = 'idle'
         self._mutex = Lock() # Not in use
         self.print_state = False
+        self.is_logging_to = None
 
     def lock(self):
         self._mutex.acquire()
@@ -82,6 +83,7 @@ def _press_help(key_pressed, state):
     keys = sorted(state.handlers.keys())
     for k in keys:
         print_and_cr("\t%s - %s" % (k, state.handlers[k].__name__.replace("press","").replace("_", " ").strip()))
+    print_and_cr("\tq - quit the demo")
     print_and_cr("Robot Modes:")
     modes = sorted(state.modes.keys())
     for m in modes:
@@ -95,7 +97,6 @@ def keyboard_proc(state):
     print_and_cr("[INFO] Accepting keyboard commands, press 'h' for help.")
     res = getch()
     while res != 'q' and not state.quit: # Press q to quit
-        print_and_cr('')
         if res in state.handler_keys:
             state.handlers[res](res, state)
         sleep(0.01)
@@ -164,8 +165,14 @@ def run_demo(callback_to_install_func=None, params={}):
             if command is not None:
                 state.franka.apply_commands_offsets(command)
 
+            if state.is_logging_to:
+                print(command)
+                state.log_queue.put((
+                    time(), state.robostate, command
+                ))
+
         ts_counter += 1
-        sleep(period)
+        sleep(period) # TODO ensure real time sync
 
     for func in state.onclose:
         func(state)
