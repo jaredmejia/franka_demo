@@ -166,13 +166,13 @@ def run_demo(callback_to_install_func=None, params={}):
                 state.franka.apply_commands_offsets(command)
 
             if state.is_logging_to:
-                print(command)
                 state.log_queue.put((
                     time(), state.robostate, command
                 ))
 
         ts_counter += 1
-        sleep(period) # TODO ensure real time sync
+        sleep_till = ts + ts_counter * period
+        sleep(max(sleep_till - time(), 0))
 
     for func in state.onclose:
         func(state)
