@@ -11,6 +11,7 @@ from threading import Lock, Thread
 from time import time, sleep
 
 from franka_demo.hardware_franka import FrankaArm, JointPDPolicy
+from franka_demo.hardware_dummy import DummyFrankaArm
 from franka_demo import getch
 
 STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz
@@ -43,7 +44,9 @@ class State(object):
 
 def init_robot(ip_address):
     print_and_cr(f"[INFO] Try connecting to Franka robot at {ip_address} ...")
-    franka = FrankaArm(name="Franka-Demo", ip_address=ip_address)
+    franka = FrankaArm(name="Franka-Demo", ip_address=ip_address) \
+        if ip_address != "0" \
+        else DummyFrankaArm(name="Dummy", ip_address=None)
     franka.reset()
     franka.connect(policy=franka.default_policy(1.0, 1.0))
     print_and_cr(f"[INFO] Connected to Franka arm")
@@ -152,6 +155,7 @@ def run_demo(callback_to_install_func=None, params={}):
             except Exception as e:
                 print_and_cr("[ERROR] Unable to communicate with Polymetis server")
                 print_and_cr("[ERROR] Shutting down demo")
+                print(e)
                 state.quit = True
                 break
 
