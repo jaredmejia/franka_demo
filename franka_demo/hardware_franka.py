@@ -49,7 +49,7 @@ import numpy as np
 from numpy.core.fromnumeric import size
 import torch
 
-from polymetis import RobotInterface
+from polymetis import RobotInterface, GripperInterface
 import torchcontrol as toco
 import argparse
 
@@ -98,6 +98,8 @@ class FrankaArm():
         self.robot = RobotInterface(
             ip_address=ip_address,
         )
+        self.gripper = GripperInterface(ip_address=ip_address)
+        self.gripper.max_width = self.gripper.get_state().max_width
         # self.reset()
 
     def default_policy(self, kq_ratio=.5, kqd_ratio=.5):
@@ -135,6 +137,7 @@ class FrankaArm():
     def reset(self):
         """Reset hardware"""
         self.robot.go_home()
+        #self.open_gripper()
 
     def get_sensors(self):
         """Get hardware sensors"""
@@ -159,6 +162,11 @@ class FrankaArm():
     def __del__(self):
         self.close()
 
+    def close_gripper(self):
+        self.gripper.grasp(speed=0.1, force=1.0)
+
+    def open_gripper(self):
+        self.gripper.goto(width=0.2, speed=0.1, force=1.0)
 
 # Get inputs from user
 def get_args():
