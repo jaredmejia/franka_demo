@@ -107,6 +107,7 @@ def keyboard_proc(state):
         res = getch()
     print_and_cr("[INFO] Closing Demo")
     state.quit = True
+    return None
 
 def run_demo(callback_to_install_func=None, params={}):
     # Command thread
@@ -173,8 +174,9 @@ def run_demo(callback_to_install_func=None, params={}):
                 state.franka.apply_commands_offsets(command)
 
             if state.is_logging_to:
+                cam_ptr = [(c[1], c[3]) for i, c in enumerate(cam_data)] if cam_data else None # Timestamp
                 state.log_queue.put((
-                    time(), state.robostate, command, cam_data
+                    time(), state.robostate, command, cam_ptr
                 ))
                 #print_and_cr(str(time()))
 
@@ -186,4 +188,5 @@ def run_demo(callback_to_install_func=None, params={}):
         func(state)
 
     state.franka.close()
+    keyboard_thread.join()
     print_and_cr("[INFO] Demo Closed")
