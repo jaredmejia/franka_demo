@@ -105,7 +105,7 @@ def keyboard_proc(state):
             state.handlers[res](res, state)
         sleep(0.01)
         res = getch()
-    print_and_cr("[INFO] Closing Demo")
+    print_and_cr("[INFO] Quitting the demo ...")
     state.quit = True
     return None
 

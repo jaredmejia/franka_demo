@@ -7,6 +7,7 @@ from franka_demo.demo_interfaces import print_and_cr
 
 def add_logging_function(state):
     state.handlers['l'] = _press_logging
+    state.onclose.append(terminate_logging)
     state.onclose.append(clear_log_queue_on_quit)
     state.log_queue = Queue()
     state.is_logging_to = None
@@ -22,14 +23,18 @@ def add_logging_function(state):
         os.mkdir(state.params['log_folder'])
     state.log_folder = state.params['log_folder']
 
-def _press_logging(key_pressed, state):
-    if state.is_logging_to:
+def terminate_logging(state):
+    if state.is_logging_to is not None:
         state.log_queue.put(None)
         state.running_logger.join()
         state.is_logging_to = None
         if hasattr(state, 'cameras') and state.cameras is not None:
             state.cameras.close_logger(state)
         print_and_cr(f"[LOGGING] Stop logging")
+
+def _press_logging(key_pressed, state):
+    if state.is_logging_to:
+        terminate_logging(state)
     else:
         state.is_logging_to = os.path.join(
             state.log_folder,

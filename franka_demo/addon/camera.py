@@ -17,7 +17,7 @@ def add_camera_function(state):
     state.is_logging_to = None
     state.cam_recorder_queue = MPQueue()
     state.cameras = RealSense(state)
-
+    state.onclose.append(close_cameras)
     state.handlers['C'] = debug_update_camera_fps              # FOR DEBUG
 
 class RealSense:
@@ -74,10 +74,10 @@ class RealSense:
         self.cam_logger.start()
 
     def close_logger(self, state):
-        print(f"[DEBUG] Closing camera logger")
+        #print(f"[DEBUG] Closing camera logger")
         state.cam_recorder_queue.put(-1)
         self.cam_logger.join()
-        print(f"[DEBUG] Camera Logger closed.")
+        #print(f"[DEBUG] Camera Logger closed.")
 
 def list_realsense():
     import usb.core
@@ -101,7 +101,7 @@ def update_camera(pipes, cam_state, state):
         state.cam_counter[device_id] = []           # FOR DEBUG
 
     sleep_counter = time.time()
-    while True:
+    while not state.quit:
         for i, (device_id, pipe) in enumerate(pipes):
             frames = pipe.poll_for_frames()
             if (frames.is_frameset()):
@@ -173,6 +173,9 @@ def debug_update_camera_fps(key_pressed, state):
             counter = counter[-100:]
         print(f"{device_id}: {len(counter) / (counter[-1] - counter[0])} FPS")
 
+
+def close_cameras(state):
+    state.cameras.pull_thread.join()
 
 if __name__ == "__main__":
     pass
