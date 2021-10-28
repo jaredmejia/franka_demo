@@ -137,6 +137,7 @@ class FrankaArm():
     def reset(self):
         """Reset hardware"""
         self.robot.go_home()
+        self.close_gripper()
         #self.open_gripper()
 
     def get_sensors(self):

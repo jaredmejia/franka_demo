@@ -20,8 +20,8 @@ REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
 CMD_SHAPE = 7
 CMD_DTYPE = np.float64  # np.float64 for C++ double; np.float32 for float
-CMD_DELTA_HIGH = np.array([0.05] * CMD_SHAPE)
-CMD_DELTA_LOW = np.array([-0.05] * CMD_SHAPE)
+CMD_DELTA_HIGH = np.array([0.1] * CMD_SHAPE)
+CMD_DELTA_LOW = np.array([-0.1] * CMD_SHAPE)
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
@@ -48,7 +48,7 @@ def init_robot(ip_address):
         if ip_address != "0" \
         else DummyFrankaArm(name="Dummy", ip_address=None)
     franka.reset()
-    franka.connect(policy=franka.default_policy(1.0, 1.0))
+    franka.connect(policy=franka.default_policy(1.5, 1.5))
     print_and_cr(f"[INFO] Connected to Franka arm")
     redis_store = redis.Redis()
     return State(franka, redis_store)
@@ -155,6 +155,7 @@ def run_demo(callback_to_install_func=None, params={}):
                     state.mode = 'reset'
             except Exception as e:
                 print_and_cr("[ERROR] Unable to communicate with Polymetis server")
+                print_and_cr("Last known robostate {state.robostate}")
                 print_and_cr("[ERROR] Shutting down demo")
                 print(e)
                 state.quit = True
@@ -164,7 +165,11 @@ def run_demo(callback_to_install_func=None, params={}):
                 print_and_cr(f"[INFO] Current state {state.robostate}")
                 state.print_state = False
 
-            cam_data = state.cameras.get_data() if state.cameras else None
+            cam_data = None
+            if state.cameras:
+                cam_state = state.cameras.get_data()
+                cam_data = [(c[1], c[3]) for i, c in enumerate(cam_state)]
+                # [cam0rgb timestamp, cam0depth ts, cam1rgb, cam1depth, ...]
 
             current_mode = state.mode
             assert current_mode in state.mode_keys
@@ -174,11 +179,9 @@ def run_demo(callback_to_install_func=None, params={}):
                 state.franka.apply_commands_offsets(command)
 
             if state.is_logging_to:
-                cam_ptr = [(c[1], c[3]) for i, c in enumerate(cam_data)] if cam_data else None # Timestamp
                 state.log_queue.put((
-                    time(), state.robostate, command, cam_ptr
+                    time(), state.robostate, command, cam_data
                 ))
-                #print_and_cr(str(time()))
 
         ts_counter += 1
         sleep_till = ts + ts_counter * period

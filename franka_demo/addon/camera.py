@@ -152,12 +152,12 @@ def record_camera(fn_prefix, proc_queue, num_writers):
         idx, device_id, color_image, color_timestamp, depth_image, depth_timestamp = item
         color_im = Image.fromarray(color_image[:,:,::-1])
         writer_queue.put((
-            f"{fn_prefix}/cam{idx}-{device_id}-{color_timestamp}-color.jpeg",
+            f"{fn_prefix}/c{idx}-{device_id}-{color_timestamp}-color.jpeg",
             color_im
         ))
         depth_im = Image.fromarray(depth_image.astype(np.uint8))
         writer_queue.put((
-            f"{fn_prefix}/cam{idx}-{device_id}-{depth_timestamp}-depth.png",
+            f"{fn_prefix}/c{idx}-{device_id}-{depth_timestamp}-depth.png",
             depth_im
         ))
 
