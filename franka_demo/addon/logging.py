@@ -67,9 +67,7 @@ def start_logging(folder_name, q, log_camera):
             file_handler.write(str(item))
         file_handler.write(',')
     if log_camera:
-        for cam in new_items[-1]:
-            for info in cam:
-                file_handler.write(f"{info}-")
+        file_handler.write("-".join(map(str, new_items[-1])))
     file_handler.write('\n')
     idx += 1
 

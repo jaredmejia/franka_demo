@@ -168,7 +168,7 @@ def run_demo(callback_to_install_func=None, params={}):
             cam_data = None
             if state.cameras:
                 cam_state = state.cameras.get_data()
-                cam_data = [(c[1], c[3]) for i, c in enumerate(cam_state)]
+                cam_data = [cam_state[c][1] for c in sorted(cam_state.keys())]
                 # [cam0rgb timestamp, cam0depth ts, cam1rgb, cam1depth, ...]
 
             current_mode = state.mode

@@ -54,7 +54,7 @@ class RealSense:
             time.sleep(0.033)
 
         # Keep polling for frames in a background thread
-        self.cam_state = [(), (), ()]
+        self.cam_state = {}
         self.pull_thread = Thread(target=update_camera, name="Update cameras",
                                   args=(self.pipes, self.cam_state, state))
         self.pull_thread.start()
@@ -114,7 +114,8 @@ def update_camera(pipes, cam_state, state):
                 depth_timestamp = depth_frame.get_timestamp()
                 color_image = np.asanyarray(color_frame.get_data())
                 color_timestamp = color_frame.get_timestamp()
-                cam_state[i] = (color_image, color_timestamp, depth_image, depth_timestamp)
+                cam_state[f"cam{i}c"] = (color_image, color_timestamp)
+                cam_state[f"cam{i}d"] = (depth_image, depth_timestamp)
                 state.cam_counter[device_id].append(time.time()) # FOR DEBUG
                 if state.is_logging_to:
                     state.cam_recorder_queue.put((i, device_id, color_image, color_timestamp, depth_image, depth_timestamp))
