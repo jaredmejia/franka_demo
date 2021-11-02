@@ -168,11 +168,11 @@ def debug_update_camera_fps(key_pressed, state):
     for device_id in state.cameras.device_ls:
         counter = state.cam_counter[device_id]
         if time.time() - counter[-1] > 0.5:
-            print(f"{device_id} didn't received update in {time.time() - counter[-1]:.1f} sec")
+            print_and_cr(f"{device_id} didn't received update in {time.time() - counter[-1]:.1f} sec")
             continue
         if len(counter) > 100:
             counter = counter[-100:]
-        print(f"{device_id}: {len(counter) / (counter[-1] - counter[0])} FPS")
+        print_and_cr(f"{device_id}: {len(counter) / (counter[-1] - counter[0])} FPS")
 
 
 def close_cameras(state):

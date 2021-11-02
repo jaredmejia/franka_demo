@@ -22,6 +22,7 @@ CMD_SHAPE = 7
 CMD_DTYPE = np.float64  # np.float64 for C++ double; np.float32 for float
 CMD_DELTA_HIGH = np.array([0.1] * CMD_SHAPE)
 CMD_DELTA_LOW = np.array([-0.1] * CMD_SHAPE)
+START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813])
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
@@ -79,8 +80,18 @@ def __cmd_reset(state, timestamp):
 def _press_print(key_pressed, state):
     state.print_state = True
 
+def _press_idle(key_pressed, state):
+    state.mode = 'idle'
+
 def __cmd_idle(state, timestamp):
     return None
+
+def _press_start(key_pressed, state):
+    state.mode = 'start'
+
+def __cmd_start(state, timestamp):
+    clipped_cmd = np.clip(START_POSITION, state.robostate+CMD_DELTA_LOW, state.robostate+CMD_DELTA_HIGH)
+    return clipped_cmd
 
 def _press_help(key_pressed, state):
     print_and_cr("Keypress Handlers:")
@@ -117,11 +128,17 @@ def run_demo(callback_to_install_func=None, params={}):
     modes = {}      # Generate command depending on the mode
     onclose = []    # Clean up on closing the demo
 
-    handlers['r'] = _press_reset
     handlers['p'] = _press_print
     handlers['h'] = _press_help
+
+    handlers['r'] = _press_reset
     modes['reset'] = __cmd_reset
+
+    handlers['.'] = _press_idle
     modes['idle'] = __cmd_idle
+
+    handlers['/'] = _press_start
+    modes['start'] = __cmd_start
 
     state.handlers = handlers
     state.modes = modes
