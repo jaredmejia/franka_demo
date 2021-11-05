@@ -98,8 +98,8 @@ class FrankaArm():
         self.robot = RobotInterface(
             ip_address=ip_address,
         )
-        self.gripper = GripperInterface(ip_address=ip_address)
-        self.gripper.max_width = self.gripper.get_state().max_width
+        # self.gripper = GripperInterface(ip_address=ip_address)
+        # self.gripper.max_width = self.gripper.get_state().max_width
         # self.reset()
 
     def default_policy(self, kq_ratio=.5, kqd_ratio=.5):
@@ -137,7 +137,7 @@ class FrankaArm():
     def reset(self):
         """Reset hardware"""
         self.robot.go_home()
-        self.close_gripper()
+        # self.close_gripper()
         #self.open_gripper()
 
     def get_sensors(self):

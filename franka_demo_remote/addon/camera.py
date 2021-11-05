@@ -7,7 +7,7 @@ from threading import Thread
 import queue
 from multiprocessing import Queue as MPQueue
 from multiprocessing import Process
-from franka_demo.demo_interfaces import print_and_cr
+from franka_demo_remote.demo_interfaces import print_and_cr
 
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
@@ -58,6 +58,11 @@ class RealSense:
         self.pull_thread = Thread(target=update_camera, name="Update cameras",
                                   args=(self.pipes, self.cam_state, state))
         self.pull_thread.start()
+
+        self.visual_thread = Thread(target=render_cam_state, name="Render camera states",
+                                  args=(self.cam_state, state))
+        self.visual_thread.start()
+
         print_and_cr(f"[INFO] Camera setup completed.")
 
     def get_num_cameras(self):
@@ -122,6 +127,22 @@ def update_camera(pipes, cam_state, state):
         sleep_counter += 0.005
         time.sleep(max(0, sleep_counter - time.time()))
 
+def render_cam_state(cam_state, state):
+    """ Update camera info"""
+    num_cam = 3 # hack
+    sleep_counter = time.time()
+    while not state.quit:
+        if len(cam_state.keys()) == num_cam * 2:
+            imgs_ti = []
+            for i in range(num_cam):
+                color_image = cam_state[f"cam{i}c"][0]
+                imgs_ti.append(color_image)
+            stacked_imgs_ti = np.hstack(imgs_ti)
+            cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow('RealSense', stacked_imgs_ti)
+            cv2.waitKey(1)
+            # sleep_counter += 0.005
+            # time.sleep(max(0, sleep_counter - time.time()))
 
 def camera_writer(q):
     while True:

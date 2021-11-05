@@ -10,9 +10,9 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
-from franka_demo.hardware_franka import FrankaArm, JointPDPolicy
-from franka_demo.hardware_dummy import DummyFrankaArm
-from franka_demo import getch
+from franka_demo_remote.hardware_franka import FrankaArm, JointPDPolicy
+from franka_demo_remote.hardware_dummy import DummyFrankaArm
+from franka_demo_remote import getch
 
 STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz
 CMD_EVERY_ITER = 5                          # Send command at 200/5 = 40Hz

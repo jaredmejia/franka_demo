@@ -2,9 +2,9 @@ import sys
 import numpy as np
 from time import time, sleep
 
-from franka_demo.hardware_franka import get_args
-from franka_demo.demo_interfaces import run_demo
-from franka_demo.addon import add_teleop_function, add_logging_function, add_camera_function
+from franka_demo_remote.hardware_franka import get_args
+from franka_demo_remote.demo_interfaces import run_demo
+from franka_demo_remote.addon import add_teleop_function, add_logging_function, add_camera_function
 
 def callback_func(state):
     add_teleop_function(state)
