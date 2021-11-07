@@ -116,7 +116,7 @@ def keyboard_proc(state):
             state.handlers[res](res, state)
         sleep(0.01)
         res = getch()
-    print_and_cr("[INFO] Quitting the demo ...")
+    print_and_cr("[INFO] Keyboard thread terminated.")
     state.quit = True
     return None
 
@@ -204,9 +204,11 @@ def run_demo(callback_to_install_func=None, params={}):
         sleep_till = ts + ts_counter * period
         sleep(max(sleep_till - time(), 0))
 
+    keyboard_thread.join()
+    print_and_cr("[INFO] Closing the demo.")
+
     for func in state.onclose:
         func(state)
 
     state.franka.close()
-    keyboard_thread.join()
     print_and_cr("[INFO] Demo Closed")
