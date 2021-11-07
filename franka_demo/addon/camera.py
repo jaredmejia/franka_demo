@@ -7,6 +7,7 @@ from threading import Thread
 import queue
 from multiprocessing import Queue as MPQueue
 from multiprocessing import Process
+
 from franka_demo.demo_interfaces import print_and_cr
 
 CAM_WIDTH = 640
@@ -19,6 +20,7 @@ def add_camera_function(state):
     state.cameras = RealSense(state)
     state.onclose.append(close_cameras)
     state.handlers['C'] = debug_update_camera_fps              # FOR DEBUG
+    state.handlers['D'] = debug_camera_connection               # FOR DEBUG
 
 class RealSense:
     """ Wrapper that implements boilerplate code for RealSense cameras """
@@ -78,16 +80,6 @@ class RealSense:
         state.cam_recorder_queue.put(-1)
         self.cam_logger.join()
         #print(f"[DEBUG] Camera Logger closed.")
-
-def list_realsense():
-    import usb.core
-    devs = chain(usb.core.find(idVendor=0x8086, idProduct=0x0b07, find_all=True),
-                usb.core.find(idVendor=0x8086, idProduct=0x0b3a, find_all=True))
-    for dev in devs:
-        print('Found realsense ', \
-            'bus', dev.bus, \
-            'port', dev.port_number, \
-            'prod', dev.product)
 
 def update_camera(pipes, cam_state, state):
     """ Update camera info"""
@@ -158,7 +150,7 @@ def record_camera(fn_prefix, proc_queue, num_writers):
         ))
         depth_im = Image.fromarray(depth_image.astype(np.uint8))
         writer_queue.put((
-            f"{fn_prefix}/c{idx}-{device_id}-{depth_timestamp}-depth.png",
+            f"{fn_prefix}/c{idx}-{device_id}-{depth_timestamp}-depth.jpeg",
             depth_im
         ))
 
@@ -167,13 +159,31 @@ def debug_update_camera_fps(key_pressed, state):
     """ Print the FPS for each camera"""
     for device_id in state.cameras.device_ls:
         counter = state.cam_counter[device_id]
-        if time.time() - counter[-1] > 0.5:
+        if len(counter) == 0:
+            print_and_cr(f"{device_id} didn't receive any update")
+        elif time.time() - counter[-1] > 0.5:
             print_and_cr(f"{device_id} didn't received update in {time.time() - counter[-1]:.1f} sec")
             continue
-        if len(counter) > 100:
-            counter = counter[-100:]
-        print_and_cr(f"{device_id}: {len(counter) / (counter[-1] - counter[0])} FPS")
+        else:
+            if len(counter) > 100:
+                counter = counter[-100:]
+            print_and_cr(f"{device_id}: {len(counter) / (counter[-1] - counter[0])} FPS")
 
+
+def list_realsense():
+    try:
+        from itertools import chain
+        import usb.core
+        devs = chain(usb.core.find(idVendor=0x8086, idProduct=0x0b07, find_all=True),
+                    usb.core.find(idVendor=0x8086, idProduct=0x0b3a, find_all=True))
+        for dev in devs:
+            print_and_cr(f"Found {dev.product} " +
+                f"bus {dev.bus} port {dev.port_number}")
+    except e:
+        print(e)
+
+def debug_camera_connection(key_pressed, state):
+    list_realsense()
 
 def close_cameras(state):
     state.cameras.pull_thread.join()
