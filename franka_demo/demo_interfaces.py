@@ -10,7 +10,7 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
-from franka_demo.hardware_franka import FrankaArm, JointPDPolicy
+from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
 from franka_demo.hardware_dummy import DummyFrankaArm
 from franka_demo import getch
 
@@ -18,10 +18,7 @@ STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz
 CMD_EVERY_ITER = 5                          # Send command at 200/5 = 40Hz
 REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
-CMD_SHAPE = 7
 CMD_DTYPE = np.float64  # np.float64 for C++ double; np.float32 for float
-CMD_DELTA_HIGH = np.array([0.1] * CMD_SHAPE)
-CMD_DELTA_LOW = np.array([-0.1] * CMD_SHAPE)
 START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813])
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
@@ -29,6 +26,10 @@ def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 class State(object):
     def __init__(self, franka, redis_store):
         self.franka = franka
+        self.cmd_shape = franka.CMD_SHAPE
+        self.CMD_DELTA_HIGH = np.array([0.1] * franka.CMD_SHAPE)
+        self.CMD_DELTA_LOW = np.array([-0.1] * franka.CMD_SHAPE)
+
         self.redis_store = redis_store
         self.cameras = None
         self.quit = False
@@ -43,11 +44,17 @@ class State(object):
     def unlock(self):
         self._mutex.release()
 
-def init_robot(ip_address):
+    def redis_receive_command(self):
+        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(self.cmd_shape))
+
+def init_robot(ip_address, gripper):
     print_and_cr(f"[INFO] Try connecting to Franka robot at {ip_address} ...")
-    franka = FrankaArm(name="Franka-Demo", ip_address=ip_address) \
-        if ip_address != "0" \
-        else DummyFrankaArm(name="Dummy", ip_address=None)
+    if ip_address == "0":
+        franka = DummyFrankaArm(name="Dummy", ip_address=None)
+    elif gripper == False:
+        franka = FrankaArm(name="Franka-Demo", ip_address=ip_address)
+    else:
+        franka = FrankaArmWithGripper(name="Franka-Demo-Gripper", ip_address=ip_address)
     franka.reset()
     franka.connect(policy=franka.default_policy(1.5, 1.5))
     print_and_cr(f"[INFO] Connected to Franka arm")
@@ -60,8 +67,6 @@ def redis_send_states(redis_store, robostate):
 def redis_send_dummy_command(redis_store, robopos):
     redis_store.set(REDIS_CMD_KEY, robopos.tobytes())
 
-def redis_receive_command(redis_store):
-    return np.array(np.frombuffer(redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(CMD_SHAPE))
 
 # ------------------------------------------------------------------------------
 # Example Functions
@@ -90,7 +95,7 @@ def _press_start(key_pressed, state):
     state.mode = 'start'
 
 def __cmd_start(state, timestamp):
-    clipped_cmd = np.clip(START_POSITION, state.robostate+CMD_DELTA_LOW, state.robostate+CMD_DELTA_HIGH)
+    clipped_cmd = np.clip(START_POSITION, state.robostate+state.CMD_DELTA_LOW, state.robostate+state.CMD_DELTA_HIGH)
     return clipped_cmd
 
 def _press_help(key_pressed, state):
@@ -122,7 +127,8 @@ def keyboard_proc(state):
 
 def run_demo(callback_to_install_func=None, params={}):
     # Command thread
-    state = init_robot(params['ip_address'])
+    if 'gripper' not in params: params['gripper'] = True
+    state = init_robot(params['ip_address'], params['gripper'])
 
     handlers = {}   # Handle key pressing event
     modes = {}      # Generate command depending on the mode

@@ -18,6 +18,8 @@ class DummyPolymetisRobot():
         return self.response
 
 class DummyFrankaArm():
+    CMD_SHAPE = 7
+
     def __init__(self, name, ip_address, **kwargs):
         self.robot = DummyPolymetisRobot()
 
