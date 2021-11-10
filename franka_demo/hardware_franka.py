@@ -86,6 +86,7 @@ class JointPDPolicy(toco.PolicyModule):
 
 class FrankaArm():
     CMD_SHAPE = 7
+    START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813])
 
     def __init__(self, name, ip_address, **kwargs):
         self.name = name
@@ -97,6 +98,7 @@ class FrankaArm():
         # Initialize self.robot interface
         self.robot = RobotInterface(
             ip_address=ip_address,
+            enforce_version=False,
         )
 
     def default_policy(self, kq_ratio=.5, kqd_ratio=.5):
@@ -162,6 +164,7 @@ from .hardware_gripper import Gripper
 
 class FrankaArmWithGripper(FrankaArm):
     CMD_SHAPE = 8
+    START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813, 0.08])
 
     def __init__(self, name, ip_address, **kwargs):
         super(FrankaArmWithGripper, self).__init__(name, ip_address, **kwargs)

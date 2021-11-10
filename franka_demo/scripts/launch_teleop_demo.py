@@ -18,5 +18,5 @@ if __name__ == "__main__":
     run_demo(callback_func, params={
         'ip_address': args.server_ip,
         'log_folder': 'logs',
-        'gripper': False,
+        'gripper': True,
     })

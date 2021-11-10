@@ -9,12 +9,14 @@ def get_gripper_state(gripper_interface, lock, cache):
     while True:
         with lock:
             cache['width'] = gripper_interface.get_state().width
+            #print(f"<- {cache['width']}")
         sleep(0.01)
 
 def send_gripper_cmd(grpc_connection, lock, cache):
     while True:
         with lock:
             width, speed, force = cache['cmd']
+            #print(f"-> {width}")
         grpc_connection.Goto(polymetis_pb2.GripperCommand(width=width, speed=speed, force=force))
         sleep(0.01)
 
@@ -72,4 +74,14 @@ if __name__ == "__main__":
     gripper.goto(width=gripper.gripper_max_width, speed=0.1, force=0.1)
     sleep(1)
     print(f"Get width: {gripper.get()}")
+    sleep(1)
+    print(f"Trying to oscillate between open / close")
+    import numpy as np
+    oscilation_w = gripper.gripper_max_width * \
+        np.array([0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.3, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3, 0.4, 0.5, 0.6, 0.7, 0.85, 1.0, 0.5, 0.1])
+    for w in oscilation_w:
+        gripper.goto(width=w, speed=0.1, force=0.1)
+        sleep(0.3)
+        print(f"Get width: {gripper.get()}")
+    sleep(1)
     print("Finished")

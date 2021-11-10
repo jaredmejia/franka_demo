@@ -18,8 +18,7 @@ STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz
 CMD_EVERY_ITER = 5                          # Send command at 200/5 = 40Hz
 REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
-CMD_DTYPE = np.float64  # np.float64 for C++ double; np.float32 for float
-START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813])
+CMD_DTYPE = np.float64         # np.float64 for C++ double; np.float32 for float
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
@@ -45,7 +44,7 @@ class State(object):
         self._mutex.release()
 
     def redis_receive_command(self):
-        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(self.cmd_shape))
+        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(8))[:self.cmd_shape]
 
 def init_robot(ip_address, gripper):
     print_and_cr(f"[INFO] Try connecting to Franka robot at {ip_address} ...")
@@ -87,15 +86,19 @@ def _press_print(key_pressed, state):
 
 def _press_idle(key_pressed, state):
     state.mode = 'idle'
+    print_and_cr("Enter idle mode")
 
 def __cmd_idle(state, timestamp):
     return None
 
 def _press_start(key_pressed, state):
     state.mode = 'start'
+    print_and_cr("Return to home position.")
 
 def __cmd_start(state, timestamp):
-    clipped_cmd = np.clip(START_POSITION, state.robostate+state.CMD_DELTA_LOW, state.robostate+state.CMD_DELTA_HIGH)
+    clipped_cmd = np.clip(state.franka.START_POSITION,
+        state.robostate + state.CMD_DELTA_LOW,
+        state.robostate + state.CMD_DELTA_HIGH)
     return clipped_cmd
 
 def _press_help(key_pressed, state):

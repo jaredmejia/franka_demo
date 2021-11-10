@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 
 import numpy as np
+from .hardware_franka import FrankaArm
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
@@ -19,9 +20,11 @@ class DummyPolymetisRobot():
 
 class DummyFrankaArm():
     CMD_SHAPE = 7
+    START_POSITION = FrankaArm.START_POSITION
 
     def __init__(self, name, ip_address, **kwargs):
         self.robot = DummyPolymetisRobot()
+        self.state = np.array(FrankaArm.START_POSITION, dtype=np.float32)
 
     def default_policy(self, kq_ratio=5, kqd_ratio=5):
         pass
@@ -39,14 +42,14 @@ class DummyFrankaArm():
         pass
 
     def get_sensors(self):
-        return np.arange(7, dtype=np.float32)
+        return self.state
 
     def get_sensors_offsets(self):
         return self.get_sensors()
 
     def apply_commands(self, cmd):
-        pass
+        self.state = np.array(cmd, dtype=np.float32)
 
     def apply_commands_offsets(self, cmd):
-        pass
+        self.apply_commands(cmd)
 

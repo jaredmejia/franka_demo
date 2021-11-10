@@ -13,7 +13,11 @@ def __cmd_teleop(state, timestamp):
     joint_pos_desired = state.redis_receive_command()
     #print_and_cr(f"Received joint command {joint_pos_desired}")
     #print_and_cr(f"Current robot state {state.robostate}")
-    np.clip(joint_pos_desired, state.robostate+state.CMD_DELTA_LOW, state.robostate+state.CMD_DELTA_HIGH, out=joint_pos_desired)
+    #print_and_cr(f"Diff {joint_pos_desired - state.robostate}")
+    np.clip(joint_pos_desired,
+        state.robostate + state.CMD_DELTA_LOW,
+        state.robostate + state.CMD_DELTA_HIGH,
+        out=joint_pos_desired)
     #print_and_cr(f"Clipped cmd's delta {joint_pos_desired - state.robostate}")
     return joint_pos_desired
 
