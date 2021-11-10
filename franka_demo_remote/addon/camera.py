@@ -12,6 +12,8 @@ from franka_demo_remote.demo_interfaces import print_and_cr
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
 CAM_FPS = 30
+CAM_KEYS = ["cam0c", "cam1c", "cam2c"]
+FRAME_TYPE = np.uint8
 
 def add_camera_function(state):
     state.is_logging_to = None
@@ -60,7 +62,7 @@ class RealSense:
         self.pull_thread.start()
 
         self.visual_thread = Thread(target=render_cam_state, name="Render camera states",
-                                  args=(self.cam_state, state))
+                                  args=[state])
         self.visual_thread.start()
 
         print_and_cr(f"[INFO] Camera setup completed.")
@@ -124,23 +126,32 @@ def update_camera(pipes, cam_state, state):
                 state.cam_counter[device_id].append(time.time()) # FOR DEBUG
                 if state.is_logging_to:
                     state.cam_recorder_queue.put((i, device_id, color_image, color_timestamp, depth_image, depth_timestamp))
+        redis_send_frame(state.redis_store, cam_state)
         sleep_counter += 0.005
         time.sleep(max(0, sleep_counter - time.time()))
 
-def render_cam_state(cam_state, state):
+def redis_send_frame(redis_store, cam_state):
+    for key in CAM_KEYS:
+        redis_store.set(key, cam_state[key][0].tobytes())
+
+def redis_receive_frame(redis_store):
+    cam_state = {}
+    for key in CAM_KEYS:
+        cam_state[key] = np.array(np.frombuffer(redis_store.get(key), dtype=FRAME_TYPE).reshape([CAM_HEIGHT, CAM_WIDTH, 3]))
+    return cam_state
+
+def render_cam_state(state):
     """ Update camera info"""
-    num_cam = 3 # hack
-    sleep_counter = time.time()
     while not state.quit:
-        if len(cam_state.keys()) == num_cam * 2:
-            imgs_ti = []
-            for i in range(num_cam):
-                color_image = cam_state[f"cam{i}c"][0]
-                imgs_ti.append(color_image)
-            stacked_imgs_ti = np.hstack(imgs_ti)
-            cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-            cv2.imshow('RealSense', stacked_imgs_ti)
-            cv2.waitKey(1)
+        cam_state = redis_receive_frame(state.redis_store)
+        imgs_ti = []
+        for i in range(len(CAM_KEYS)):
+            color_image = cam_state[CAM_KEYS[i]]
+            imgs_ti.append(color_image)
+        stacked_imgs_ti = np.hstack(imgs_ti)
+        cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('RealSense', stacked_imgs_ti)
+        cv2.waitKey(1)
             # sleep_counter += 0.005
             # time.sleep(max(0, sleep_counter - time.time()))
 
