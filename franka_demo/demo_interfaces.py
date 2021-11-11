@@ -12,7 +12,7 @@ from time import time, sleep
 
 from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
 from franka_demo.hardware_dummy import DummyFrankaArm
-from franka_demo import getch
+from .getch import getch
 
 STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz
 CMD_EVERY_ITER = 5                          # Send command at 200/5 = 40Hz
@@ -161,8 +161,8 @@ def run_demo(callback_to_install_func=None, params={}):
     state.handler_keys = state.handlers.keys()
     state.mode_keys = state.modes.keys()
 
-    keyboard_thread = Thread(target=keyboard_proc, name='Keyboard Thread', args=(state,))
-    keyboard_thread.start()
+    keyboard_thread = Thread(target=keyboard_proc, name='Keyboard Thread',
+        args=(state,), daemon=True).start()
 
     ts = time()
     period = 1 / STATE_UPDATE_FREQ
@@ -213,7 +213,6 @@ def run_demo(callback_to_install_func=None, params={}):
         sleep_till = ts + ts_counter * period
         sleep(max(sleep_till - time(), 0))
 
-    keyboard_thread.join()
     print_and_cr("[INFO] Closing the demo.")
 
     for func in state.onclose:

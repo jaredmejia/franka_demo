@@ -24,10 +24,11 @@ def add_logging_function(state):
     state.log_folder = state.params['log_folder']
 
 def terminate_logging(state):
-    if state.is_logging_to is not None:
+    if state.is_logging_to is not None and state.running_logger is not None:
         state.log_queue.put(None)
         state.running_logger.join()
         state.is_logging_to = None
+        state.running_logger = None
         if hasattr(state, 'cameras') and state.cameras is not None:
             state.cameras.close_logger(state)
         print_and_cr(f"[LOGGING] Stop logging")

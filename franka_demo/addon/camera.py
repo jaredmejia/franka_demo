@@ -58,7 +58,8 @@ class RealSense:
         # Keep polling for frames in a background thread
         self.cam_state = {}
         self.pull_thread = Thread(target=update_camera, name="Update cameras",
-                                  args=(self.pipes, self.cam_state, state))
+                                  args=(self.pipes, self.cam_state, state),
+                                  daemon=True)
         self.pull_thread.start()
         print_and_cr(f"[INFO] Camera setup completed.")
 
@@ -186,7 +187,7 @@ def debug_camera_connection(key_pressed, state):
     list_realsense()
 
 def close_cameras(state):
-    state.cameras.pull_thread.join()
+    state.cameras.pull_thread.join() # (Optional for daemon=True threads)
 
 if __name__ == "__main__":
     pass

@@ -10,7 +10,9 @@ REDIS_KEYBOARD_DUMMY_KEY = "-"
 
 def add_rediskey_function(state):
     state.redis_store.set(REDIS_KEYBOARD_KEY, REDIS_KEYBOARD_DUMMY_KEY)
-    state.rediskey_thread = Thread(target=redis_keyboard_proc, name='Redis keyboard', args=(state,))
+    state.rediskey_thread = Thread(
+        target=redis_keyboard_proc, name='Redis keyboard',
+        args=(state,), daemon=True)
     state.rediskey_thread.start()
     state.onclose.append(close_redis_keyboard_proc)
 
