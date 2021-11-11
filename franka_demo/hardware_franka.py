@@ -49,7 +49,7 @@ import numpy as np
 from numpy.core.fromnumeric import size
 import torch
 
-from polymetis import RobotInterface, GripperInterface
+from polymetis import RobotInterface
 import torchcontrol as toco
 import argparse
 
@@ -84,9 +84,10 @@ class JointPDPolicy(toco.PolicyModule):
 
         return {"joint_torques": output}
 
-
-
 class FrankaArm():
+    CMD_SHAPE = 7
+    START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813])
+
     def __init__(self, name, ip_address, **kwargs):
         self.name = name
         self.robot = None
@@ -97,10 +98,8 @@ class FrankaArm():
         # Initialize self.robot interface
         self.robot = RobotInterface(
             ip_address=ip_address,
+            enforce_version=False,
         )
-        # self.gripper = GripperInterface(ip_address=ip_address)
-        # self.gripper.max_width = self.gripper.get_state().max_width
-        # self.reset()
 
     def default_policy(self, kq_ratio=.5, kqd_ratio=.5):
         q_initial = self.get_sensors().clone()
@@ -137,8 +136,6 @@ class FrankaArm():
     def reset(self):
         """Reset hardware"""
         self.robot.go_home()
-        # self.close_gripper()
-        #self.open_gripper()
 
     def get_sensors(self):
         """Get hardware sensors"""
@@ -163,11 +160,38 @@ class FrankaArm():
     def __del__(self):
         self.close()
 
+from .hardware_gripper import Gripper
+
+class FrankaArmWithGripper(FrankaArm):
+    CMD_SHAPE = 8
+    START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813, 0.08])
+
+    def __init__(self, name, ip_address, **kwargs):
+        super(FrankaArmWithGripper, self).__init__(name, ip_address, **kwargs)
+        self.gripper = Gripper(ip_address)
+        self.state_nparray = np.zeros(self.CMD_SHAPE)
+
+    def reset(self):
+        super(FrankaArmWithGripper, self).reset()
+        self.open_gripper()
+
     def close_gripper(self):
-        self.gripper.grasp(speed=0.1, force=1.0)
+        self.gripper.goto(width=0.0, speed=0.1, force=1.0)
 
     def open_gripper(self):
-        self.gripper.goto(width=0.2, speed=0.1, force=1.0)
+        self.gripper.goto(width=self.gripper.gripper_max_width, speed=0.1, force=1.0)
+
+    def get_sensors_offsets(self):
+        """Get hardware sensors (apply offset)"""
+        self.state_nparray[0:7] = super(FrankaArmWithGripper, self).get_sensors_offsets()
+        self.state_nparray[-1] = self.gripper.get()
+        return self.state_nparray
+
+    def apply_commands_offsets(self, q_desired):
+        """Apply hardware commands (apply offset)"""
+        super(FrankaArmWithGripper, self).apply_commands_offsets(q_desired[:-1])
+        self.gripper.goto(width=q_desired[-1], speed=0.1, force=0.1)
+
 
 # Get inputs from user
 def get_args():
