@@ -4,9 +4,9 @@ from time import time, sleep
 import redis
 from threading import Lock, Thread
 from time import time, sleep
-from franka_demo_remote.demo_interfaces import print_and_cr
-from franka_demo_remote import getch
-from franka_demo_remote.addon.camera import render_cam_state
+from franka_demo.demo_interfaces import print_and_cr
+from franka_demo import getch
+from franka_demo.addon.camera import render_cam_state
 
 REDIS_KEYBOARD_CMD_KEY = "keyboardcmd"
 HANDLER_KEYS = ['r', 'p', 'h', 't', 'l', 'C', 'q']

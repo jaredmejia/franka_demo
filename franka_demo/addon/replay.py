@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from franka_demo_remote.demo_interfaces import print_and_cr, CMD_DTYPE
+from franka_demo.demo_interfaces import print_and_cr, CMD_DTYPE
 
 def add_replay_function(state):
 	state.handlers['p'] = _press_replay

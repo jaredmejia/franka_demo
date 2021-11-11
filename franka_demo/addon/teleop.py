@@ -1,6 +1,6 @@
 import numpy as np
 
-from franka_demo_remote.demo_interfaces import print_and_cr, \
+from franka_demo.demo_interfaces import print_and_cr, \
     redis_send_dummy_command, redis_receive_command, \
     CMD_DTYPE, CMD_DELTA_LOW, CMD_DELTA_HIGH
 
