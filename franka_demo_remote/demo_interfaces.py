@@ -10,6 +10,8 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
+from multiprocessing import Process
+
 from franka_demo_remote.hardware_franka import FrankaArm, JointPDPolicy
 from franka_demo_remote.hardware_dummy import DummyFrankaArm
 from franka_demo_remote import getch
@@ -22,6 +24,8 @@ CMD_SHAPE = 7
 CMD_DTYPE = np.float64  # np.float64 for C++ double; np.float32 for float
 CMD_DELTA_HIGH = np.array([0.1] * CMD_SHAPE)
 CMD_DELTA_LOW = np.array([-0.1] * CMD_SHAPE)
+
+REDIS_KEYBOARD_CMD_KEY = "keyboardcmd"
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
@@ -62,6 +66,11 @@ def redis_send_dummy_command(redis_store, robopos):
 def redis_receive_command(redis_store):
     return np.array(np.frombuffer(redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(CMD_SHAPE))
 
+def redis_receive_keyboardcmd(redis_store):
+    return redis_store.get(REDIS_KEYBOARD_CMD_KEY).decode("utf-8")
+
+    
+
 # ------------------------------------------------------------------------------
 # Example Functions
 
@@ -96,15 +105,26 @@ def _press_help(key_pressed, state):
 
 # ------------------------------------------------------------------------------
 
-def keyboard_proc(state):
+def keyboard_proc(state, remote=False):
     # Keyboard Interface, running on a separate thread
     print_and_cr("[INFO] Accepting keyboard commands, press 'h' for help.")
-    res = getch()
-    while res != 'q' and not state.quit: # Press q to quit
-        if res in state.handler_keys:
-            state.handlers[res](res, state)
-        sleep(0.01)
+    processed = False # always False for local mode
+    if remote:
+        res = redis_receive_keyboardcmd(state.redis_store)
+        processed = int(state.redis_store.get('processed').decode("utf-8"))
+    else:
         res = getch()
+    while res != 'q' and not state.quit: # Press q to quit
+        if res in state.handler_keys and not processed:
+            state.handlers[res](res, state)
+        if remote:
+            state.redis_store.set('processed', 1)
+            sleep(0.01)
+            res = redis_receive_keyboardcmd(state.redis_store)
+            processed = int(state.redis_store.get('processed').decode("utf-8"))
+        else:
+            sleep(0.01)
+            res = getch()
     print_and_cr("[INFO] Quitting the demo ...")
     state.quit = True
     return None
@@ -135,7 +155,7 @@ def run_demo(callback_to_install_func=None, params={}):
     state.handler_keys = state.handlers.keys()
     state.mode_keys = state.modes.keys()
 
-    keyboard_thread = Thread(target=keyboard_proc, name='Keyboard Thread', args=(state,))
+    keyboard_thread = Thread(target=keyboard_proc, name='Keyboard Thread', args=(state, state.params['remote']))
     keyboard_thread.start()
 
     ts = time()

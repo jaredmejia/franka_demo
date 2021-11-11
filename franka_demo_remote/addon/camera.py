@@ -12,7 +12,7 @@ from franka_demo_remote.demo_interfaces import print_and_cr
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
 CAM_FPS = 30
-CAM_KEYS = ["cam0c", "cam1c", "cam2c"]
+CAM_KEYS = ["cam0c", "cam1c"]
 FRAME_TYPE = np.uint8
 
 def add_camera_function(state):
@@ -61,9 +61,9 @@ class RealSense:
                                   args=(self.pipes, self.cam_state, state))
         self.pull_thread.start()
 
-        self.visual_thread = Thread(target=render_cam_state, name="Render camera states",
-                                  args=[state])
-        self.visual_thread.start()
+        # self.visual_thread = Thread(target=render_cam_state, name="Render camera states",
+        #                           args=[state])
+        # self.visual_thread.start()
 
         print_and_cr(f"[INFO] Camera setup completed.")
 
@@ -126,7 +126,8 @@ def update_camera(pipes, cam_state, state):
                 state.cam_counter[device_id].append(time.time()) # FOR DEBUG
                 if state.is_logging_to:
                     state.cam_recorder_queue.put((i, device_id, color_image, color_timestamp, depth_image, depth_timestamp))
-        redis_send_frame(state.redis_store, cam_state)
+        if all([CAM_KEYS[i] in cam_state.keys() for i in range(len(CAM_KEYS))]):
+            redis_send_frame(state.redis_store, cam_state)
         sleep_counter += 0.005
         time.sleep(max(0, sleep_counter - time.time()))
 
@@ -142,6 +143,7 @@ def redis_receive_frame(redis_store):
 
 def render_cam_state(state):
     """ Update camera info"""
+    print("rendering in progress.......")
     while not state.quit:
         cam_state = redis_receive_frame(state.redis_store)
         imgs_ti = []
