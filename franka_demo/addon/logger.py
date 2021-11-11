@@ -6,11 +6,16 @@ import numpy as np
 from franka_demo.demo_interfaces import print_and_cr
 
 def add_logging_function(state):
+    state.log_queue = Queue()
+    state.is_logging_to = None
+    state.logger_process = Process(
+        target=start_logging,
+        args=(state.log_queue,))
+    state.logger_process.start()
+
     state.handlers['l'] = _press_logging
     state.onclose.append(terminate_logging)
     state.onclose.append(clear_log_queue_on_quit)
-    state.log_queue = Queue()
-    state.is_logging_to = None
 
     # set up folder to save logs
     if not 'log_folder' in state.params:
@@ -24,54 +29,57 @@ def add_logging_function(state):
     state.log_folder = state.params['log_folder']
 
 def terminate_logging(state):
-    if state.is_logging_to is not None and state.running_logger is not None:
+    if state.is_logging_to is not None:
         state.log_queue.put(None)
-        state.running_logger.join()
         state.is_logging_to = None
-        state.running_logger = None
-        if hasattr(state, 'cameras') and state.cameras is not None:
-            state.cameras.close_logger(state)
+        #if hasattr(state, 'cameras') and state.cameras is not None:
+        #    state.cameras.close_logger(state)
         print_and_cr(f"[LOGGING] Stop logging")
 
 def _press_logging(key_pressed, state):
     if state.is_logging_to:
         terminate_logging(state)
     else:
-        state.is_logging_to = os.path.join(
+        new_log_path = os.path.join(
             state.log_folder,
             strftime('%y-%m-%d-%H-%M-%S', localtime())
         )
-        os.mkdir(state.is_logging_to)
-        if hasattr(state, 'cameras') and state.cameras is not None:
-            state.cameras.launch_logger(state)
-        state.running_logger = Process(
-            target=start_logging,
-            args=(state.is_logging_to, state.log_queue,
-                  (hasattr(state, 'cameras') and state.cameras is not None)))
-        state.running_logger.start()
+        state.log_queue.put(new_log_path)
+        os.mkdir(new_log_path)
+        state.is_logging_to = new_log_path
+
+        #if hasattr(state, 'cameras') and state.cameras is not None:
+        #    state.cameras.launch_logger(state)
         print_and_cr(f"[LOGGING] Start logging to {state.is_logging_to}")
 
-def start_logging(folder_name, q, log_camera):
-  file_handler = open(os.path.join(folder_name, 'log.csv'), 'a')
-  idx = 0
-  while True:
-    new_items = q.get(block=True)
-    if new_items is None:
-        file_handler.close()
-        return
-    simple_save_items = new_items[:-1] if log_camera else new_items
-    for item in simple_save_items:
-        if isinstance(item, np.ndarray):
-            file_handler.write(np.array2string(item,
-                precision=8, separator=' ', max_line_width=9999)[1:-1])
-        else:
-            file_handler.write(str(item))
-        file_handler.write(',')
-    if log_camera:
-        file_handler.write("-".join(map(str, new_items[-1])))
-    file_handler.write('\n')
-    idx += 1
+def start_logging(q):
+    while True:
+        folder_name = q.get(block=True)
+        if folder_name is None: break
+
+        file_handler = open(os.path.join(folder_name, 'log.csv'), 'a')
+        idx = 0
+        while True:
+            new_items = q.get(block=True)
+            if new_items is None:
+                file_handler.close()
+                break
+            simple_save_items = new_items[:-1]
+            for item in simple_save_items:
+                if isinstance(item, np.ndarray):
+                    file_handler.write(np.array2string(item,
+                        precision=8, separator=' ', max_line_width=9999)[1:-1])
+                else:
+                    file_handler.write(str(item))
+                file_handler.write(',')
+            if new_items[-1] is not None:
+                file_handler.write("-".join(map(str, new_items[-1])))
+            else:
+                file_handler.write(new_items[-1])
+            file_handler.write('\n')
+            idx += 1
 
 def clear_log_queue_on_quit(state):
+    state.log_queue.put(None)
     state.log_queue.close()
     state.log_queue.join_thread()
