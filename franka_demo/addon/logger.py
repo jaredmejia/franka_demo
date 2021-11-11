@@ -33,7 +33,7 @@ def terminate_logging(state):
         state.log_queue.put(None)
         state.is_logging_to = None
         #if hasattr(state, 'cameras') and state.cameras is not None:
-        #    state.cameras.close_logger(state)
+        #    state.cameras.terminate_logging(state)
         print_and_cr(f"[LOGGING] Stop logging")
 
 def _press_logging(key_pressed, state):
@@ -49,7 +49,7 @@ def _press_logging(key_pressed, state):
         state.is_logging_to = new_log_path
 
         #if hasattr(state, 'cameras') and state.cameras is not None:
-        #    state.cameras.launch_logger(state)
+        #    state.cameras.start_logging(state)
         print_and_cr(f"[LOGGING] Start logging to {state.is_logging_to}")
 
 def start_logging(q):
