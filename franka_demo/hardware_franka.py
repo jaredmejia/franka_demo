@@ -44,6 +44,7 @@ class hardwareBase(abc.ABC):
 
 from typing import Dict, Sized
 import time
+import sys
 
 import numpy as np
 from numpy.core.fromnumeric import size
@@ -86,7 +87,9 @@ class JointPDPolicy(toco.PolicyModule):
 
 class FrankaArm():
     CMD_SHAPE = 7
-    START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813])
+    START_POSITION = np.array([-0.145, -0.67, -0.052, -2.3, 0.145, 1.13, 0.029])
+    JOINT_LIMIT_LOW = np.array([-2.8773, -1.7428, -2.8773, -3.0518, -2.8773, -1.5683, -3.6627])
+    JOINT_LIMIT_HIGH = np.array([2.8773, 1.7428, 2.8773, -0.0898, 2.8773, 2.1616, 2.0918])
 
     def __init__(self, name, ip_address, **kwargs):
         self.name = name
@@ -101,7 +104,7 @@ class FrankaArm():
             enforce_version=False,
         )
 
-    def default_policy(self, kq_ratio=.5, kqd_ratio=.5):
+    def default_policy(self, kq_ratio=1.0, kqd_ratio=1.0):
         q_initial = self.get_sensors().clone()
         kq = kq_ratio * torch.Tensor(self.robot.metadata.default_Kq)
         kqd = kqd_ratio * torch.Tensor(self.robot.metadata.default_Kqd)
@@ -153,6 +156,12 @@ class FrankaArm():
 
     def apply_commands_offsets(self, q_desired):
         """Apply hardware commands (apply offset)"""
+        if np.any(np.logical_or(q_desired < self.JOINT_LIMIT_LOW, q_desired > self.JOINT_LIMIT_HIGH)):
+            sys.stdout.write(f"Command outside joint limit {q_desired}\r\n")
+            np.clip(q_desired,
+                self.JOINT_LIMIT_LOW,
+                self.JOINT_LIMIT_HIGH,
+                out=q_desired)
         q_des_tensor = torch.tensor(q_desired) + self.JOINT_OFFSET
         #print('RAW_CMD_DIFF', q_des_tensor.float() - self.robot.get_joint_angles())
         self.robot.update_current_policy({"q_desired": q_des_tensor.float()})
@@ -164,7 +173,7 @@ from .hardware_gripper import Gripper
 
 class FrankaArmWithGripper(FrankaArm):
     CMD_SHAPE = 8
-    START_POSITION = np.array([-0.1422354, -0.02149742, -0.04364768, -2.07073975, 0.06118893, 0.42122769, -1.71912813, 0.08])
+    START_POSITION = np.array(list(FrankaArm.START_POSITION) + [0.08], dtype=np.float32)
 
     def __init__(self, name, ip_address, **kwargs):
         super(FrankaArmWithGripper, self).__init__(name, ip_address, **kwargs)
@@ -172,14 +181,14 @@ class FrankaArmWithGripper(FrankaArm):
         self.state_nparray = np.zeros(self.CMD_SHAPE)
 
     def reset(self):
-        super(FrankaArmWithGripper, self).reset()
         self.open_gripper()
+        super(FrankaArmWithGripper, self).reset()
 
     def close_gripper(self):
-        self.gripper.goto(width=0.0, speed=0.1, force=1.0)
+        self.gripper.goto(width=0.0, speed=0.1, force=0.1)
 
     def open_gripper(self):
-        self.gripper.goto(width=self.gripper.gripper_max_width, speed=0.1, force=1.0)
+        self.gripper.goto(width=self.gripper.gripper_max_width, speed=0.1, force=0.1)
 
     def get_sensors_offsets(self):
         """Get hardware sensors (apply offset)"""
