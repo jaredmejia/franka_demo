@@ -22,7 +22,10 @@ REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
 CMD_DTYPE = np.float64         # np.float64 for C++ double; np.float32 for float
 
-REDIS_KEYBOARD_CMD_KEY = "keyboardcmd"
+# REDIS_KEYBOARD_CMD_KEY = "keyboardcmd" # replaced with below
+REDIS_KEYBOARD_KEY = "franka-cmd"
+REDIS_KEYBOARD_DUMMY_KEY = "-"
+
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
@@ -72,7 +75,7 @@ def redis_send_dummy_command(redis_store, robopos):
 
 
 def redis_receive_keyboardcmd(redis_store):
-    return redis_store.get(REDIS_KEYBOARD_CMD_KEY).decode("utf-8")
+    return redis_store.get(REDIS_KEYBOARD_KEY).decode("utf-8")
 
     
 
@@ -126,24 +129,24 @@ def _press_help(key_pressed, state):
 
 def keyboard_proc(state, remote=False):
     # Keyboard Interface, running on a separate thread
+    
     print_and_cr("[INFO] Accepting keyboard commands, press 'h' for help.")
-    processed = False # always False for local mode
-    if remote:
-        res = redis_receive_keyboardcmd(state.redis_store)
-        processed = int(state.redis_store.get('processed').decode("utf-8"))
-    else:
-        res = getch()
-    while res != 'q' and not state.quit: # Press q to quit
-        if res in state.handler_keys and not processed:
-            state.handlers[res](res, state)
+    while not state.quit:
         if remote:
-            state.redis_store.set('processed', 1)
-            sleep(0.01)
             res = redis_receive_keyboardcmd(state.redis_store)
-            processed = int(state.redis_store.get('processed').decode("utf-8"))
         else:
-            sleep(0.01)
             res = getch()
+        if res != REDIS_KEYBOARD_DUMMY_KEY:
+            state.redis_store.set(REDIS_KEYBOARD_KEY, REDIS_KEYBOARD_DUMMY_KEY)
+            if res in state.handler_keys:
+                print_and_cr(f"[REDISKEY] Received {res}")
+                state.handlers[res](res, state)
+            elif res == 'q':
+                print_and_cr(f"[INFO] Received redis key to quit")
+                state.quit = True
+            else:
+                print_and_cr(f"[WARNING] Invalid redis command {res}")
+        sleep(0.01)
     print_and_cr("[INFO] Quitting the demo ...")
     state.quit = True
     return None

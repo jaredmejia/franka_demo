@@ -8,7 +8,8 @@ from franka_demo_remote.demo_interfaces import print_and_cr
 from franka_demo_remote.getch import getch
 from franka_demo_remote.addon.camera import render_cam_state
 
-REDIS_KEYBOARD_CMD_KEY = "keyboardcmd"
+REDIS_KEYBOARD_KEY = "franka-cmd"
+REDIS_KEYBOARD_DUMMY_KEY = "-"
 HANDLER_KEYS = ['r', 'p', 'h', 't', 'l', 'C', 'q']
 KEYBOARD_CMD_SHAPE = 1
 KEYBOARD_CMD_DTYPE = str
@@ -26,17 +27,17 @@ def receive_keyboard_cmd(state):
     while res != 'q' and not state.quit: # Press q to quit
         if res in HANDLER_KEYS:
             redis_send_keyboardcmd(redis_store, res)
-            state.redis_store.set('processed', 0)
+            # state.redis_store.set('processed', 0)
         sleep(0.01)
         res = getch()
     print_and_cr("[INFO] Quitting the demo ...")
     state.quit = True
     redis_send_keyboardcmd(redis_store, 'q')
-    state.redis_store.set('processed', 0)
+    # state.redis_store.set('processed', 0)
     return None
 
 def redis_send_keyboardcmd(redis_store, keyboardcmd):
-    redis_store.set(REDIS_KEYBOARD_CMD_KEY, keyboardcmd)
+    redis_store.set(REDIS_KEYBOARD_KEY, keyboardcmd)
 
 if __name__ == "__main__":
     HOST_IP = "127.0.0.1"
