@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue
 from time import strftime, localtime, sleep
 import numpy as np
 
-from franka_demo.demo_interfaces import print_and_cr
+from franka_demo_remote.demo_interfaces import print_and_cr
 
 def add_logging_function(state):
     state.log_queue = Queue()

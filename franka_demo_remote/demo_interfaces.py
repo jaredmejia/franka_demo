@@ -10,10 +10,10 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
-from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
+from franka_demo_remote.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
 from multiprocessing import Process
 
-from franka_demo.hardware_dummy import DummyFrankaArm
+from franka_demo_remote.hardware_dummy import DummyFrankaArm
 from .getch import getch
 
 STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz

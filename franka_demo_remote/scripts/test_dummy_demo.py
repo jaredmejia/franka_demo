@@ -2,8 +2,8 @@ import sys
 import numpy as np
 from time import time, sleep
 
-from franka_demo.hardware_franka import get_args
-from franka_demo.demo_interfaces import run_demo
+from franka_demo_remote.hardware_franka import get_args
+from franka_demo_remote.demo_interfaces import run_demo
 
 def _press_step(key_pressed, state):
     state.mode = 'step'

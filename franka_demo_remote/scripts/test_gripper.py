@@ -1,6 +1,6 @@
-from franka_demo.hardware_franka import get_args
-from franka_demo.demo_interfaces import run_demo
-from franka_demo.addon import add_logging_function
+from franka_demo_remote.hardware_franka import get_args
+from franka_demo_remote.demo_interfaces import run_demo
+from franka_demo_remote.addon import add_logging_function
 
 def _press_open_gripper(key_pressed, state):
     state.franka.open_gripper()
