@@ -1,7 +1,7 @@
 import numpy as np
 
-from franka_demo.demo_interfaces import print_and_cr, \
-    redis_send_dummy_command, CMD_DTYPE
+from franka_demo.utils import print_and_cr
+from franka_demo.demo_interfaces import redis_send_dummy_command, CMD_DTYPE
 
 def _press_teleop(key_pressed, state):
     print_and_cr(f"[INFO] Enter Teleop")

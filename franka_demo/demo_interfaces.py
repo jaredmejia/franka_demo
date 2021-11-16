@@ -12,6 +12,8 @@ from time import time, sleep
 
 from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
 from franka_demo.hardware_dummy import DummyFrankaArm
+from franka_demo.utils import print_and_cr
+
 from .getch import getch
 
 STATE_UPDATE_FREQ = 40                     # Refresh joint position at 40Hz
@@ -19,8 +21,6 @@ CMD_EVERY_ITER = 1                          # Send command at 40/1 = 40Hz
 REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
 CMD_DTYPE = np.float64         # np.float64 for C++ double; np.float32 for float
-
-def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
 class State(object):
     def __init__(self, franka, redis_store):
