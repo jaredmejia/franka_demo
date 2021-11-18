@@ -16,7 +16,6 @@ def send_gripper_cmd(grpc_connection, lock, cache):
     while True:
         with lock:
             width, speed, force = cache['cmd']
-            if width < 0.02: width = 0.02
             #print(f"-> {width}")
         grpc_connection.Goto(polymetis_pb2.GripperCommand(width=width, speed=speed, force=force))
         sleep(0.01)

@@ -201,6 +201,12 @@ class FrankaArmWithGripper(FrankaArm):
         super(FrankaArmWithGripper, self).apply_commands_offsets(q_desired[:-1])
         self.gripper.goto(width=q_desired[-1], speed=0.1, force=0.1)
 
+class FrankaArmWithRobotiQGripper(FrankaArmWithGripper):
+
+    def __init__(self, name, ip_address, **kwargs):
+        super(FrankaArmWithRobotiQGripper, self).__init__(name, ip_address, **kwargs)
+        self.JOINT_OFFSET[6] -= np.pi/4
+
 
 # Get inputs from user
 def get_args():

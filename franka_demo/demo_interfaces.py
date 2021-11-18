@@ -10,7 +10,7 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
-from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
+from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, FrankaArmWithRobotiQGripper, JointPDPolicy
 from franka_demo.hardware_dummy import DummyFrankaArm
 from franka_demo.utils import print_and_cr
 
@@ -53,7 +53,7 @@ def init_robot(ip_address, gripper):
     elif gripper == False:
         franka = FrankaArm(name="Franka-Demo", ip_address=ip_address)
     else:
-        franka = FrankaArmWithGripper(name="Franka-Demo-Gripper", ip_address=ip_address)
+        franka = FrankaArmWithRobotiQGripper(name="Franka-Demo-Gripper", ip_address=ip_address)
     franka.reset()
     franka.connect(policy=franka.default_policy())
     print_and_cr(f"[INFO] Connected to Franka arm")
