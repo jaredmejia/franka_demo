@@ -13,7 +13,7 @@ from franka_demo_remote.demo_interfaces import print_and_cr
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
 CAM_FPS = 30
-CAM_KEYS = ["cam0c", "cam1c"]
+CAM_KEYS = ["cam0c", "cam1c", "cam2c"]
 FRAME_TYPE = np.uint8
 NUM_WRITERS = 8
 
