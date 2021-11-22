@@ -3,7 +3,7 @@ import redis
 from time import sleep
 from threading import Thread
 
-from franka_demo.utils import print_and_cr
+from franka_demo_remote.utils import print_and_cr
 
 REDIS_KEYBOARD_KEY = "franka-cmd"
 REDIS_KEYBOARD_DUMMY_KEY = "-"

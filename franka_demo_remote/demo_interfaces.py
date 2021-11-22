@@ -10,15 +10,10 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
-<<<<<<< HEAD
-from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
 from multiprocessing import Process
-
-=======
-from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, FrankaArmWithRobotiQGripper, JointPDPolicy
->>>>>>> a7cc05797436c1ef55ba8e7030a32bb0c9681fd0
-from franka_demo.hardware_dummy import DummyFrankaArm
-from franka_demo.utils import print_and_cr
+from franka_demo_remote.hardware_franka import FrankaArm, FrankaArmWithGripper, FrankaArmWithRobotiQGripper, JointPDPolicy
+from franka_demo_remote.hardware_dummy import DummyFrankaArm
+from franka_demo_remote.utils import print_and_cr
 
 from .getch import getch
 
@@ -28,7 +23,6 @@ REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
 CMD_DTYPE = np.float64         # np.float64 for C++ double; np.float32 for float
 
-<<<<<<< HEAD
 # REDIS_KEYBOARD_CMD_KEY = "keyboardcmd" # replaced with below
 REDIS_KEYBOARD_KEY = "franka-cmd"
 REDIS_KEYBOARD_DUMMY_KEY = "-"
@@ -36,8 +30,6 @@ REDIS_KEYBOARD_DUMMY_KEY = "-"
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
-=======
->>>>>>> a7cc05797436c1ef55ba8e7030a32bb0c9681fd0
 class State(object):
     def __init__(self, franka, redis_store):
         self.franka = franka
