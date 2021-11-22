@@ -8,7 +8,7 @@ import queue
 from multiprocessing import Queue as MPQueue
 from multiprocessing import Process
 
-from franka_demo_remote.demo_interfaces import print_and_cr
+from franka_demo.demo_interfaces import print_and_cr
 
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
