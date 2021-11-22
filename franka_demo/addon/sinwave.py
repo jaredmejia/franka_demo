@@ -1,7 +1,7 @@
 import numpy as np
 from time import time
 
-from franka_demo.demo_interfaces import print_and_cr
+from franka_demo.utils import print_and_cr
 
 SINWAVE_JOINT = 6
 SINWAVE_MAGNITUDE = 0.5     # magnitude of sine wave (rad)

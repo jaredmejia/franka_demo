@@ -23,7 +23,7 @@ def send_gripper_cmd(grpc_connection, lock, cache):
 class Gripper():
     cache = {
         'width': 0.,
-        'cmd': (0., 0.1, 1.0),
+        'cmd': (0., 0.2, 0.1),
     }
 
     def __init__(self, ip_address):

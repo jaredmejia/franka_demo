@@ -10,18 +10,25 @@ import torch
 from threading import Lock, Thread
 from time import time, sleep
 
+<<<<<<< HEAD
 from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, JointPDPolicy
 from multiprocessing import Process
 
+=======
+from franka_demo.hardware_franka import FrankaArm, FrankaArmWithGripper, FrankaArmWithRobotiQGripper, JointPDPolicy
+>>>>>>> a7cc05797436c1ef55ba8e7030a32bb0c9681fd0
 from franka_demo.hardware_dummy import DummyFrankaArm
+from franka_demo.utils import print_and_cr
+
 from .getch import getch
 
-STATE_UPDATE_FREQ = 200                     # Refresh joint position at 200Hz
-CMD_EVERY_ITER = 5                          # Send command at 200/5 = 40Hz
+STATE_UPDATE_FREQ = 40                     # Refresh joint position at 40Hz
+CMD_EVERY_ITER = 1                          # Send command at 40/1 = 40Hz
 REDIS_STATE_KEY = 'robostate'
 REDIS_CMD_KEY = 'robocmd'
 CMD_DTYPE = np.float64         # np.float64 for C++ double; np.float32 for float
 
+<<<<<<< HEAD
 # REDIS_KEYBOARD_CMD_KEY = "keyboardcmd" # replaced with below
 REDIS_KEYBOARD_KEY = "franka-cmd"
 REDIS_KEYBOARD_DUMMY_KEY = "-"
@@ -29,6 +36,8 @@ REDIS_KEYBOARD_DUMMY_KEY = "-"
 
 def print_and_cr(msg): sys.stdout.write(msg + '\r\n')
 
+=======
+>>>>>>> a7cc05797436c1ef55ba8e7030a32bb0c9681fd0
 class State(object):
     def __init__(self, franka, redis_store):
         self.franka = franka
@@ -60,9 +69,9 @@ def init_robot(ip_address, gripper):
     elif gripper == False:
         franka = FrankaArm(name="Franka-Demo", ip_address=ip_address)
     else:
-        franka = FrankaArmWithGripper(name="Franka-Demo-Gripper", ip_address=ip_address)
+        franka = FrankaArmWithRobotiQGripper(name="Franka-Demo-Gripper", ip_address=ip_address)
     franka.reset()
-    franka.connect(policy=franka.default_policy(1.5, 1.5))
+    franka.connect(policy=franka.default_policy())
     print_and_cr(f"[INFO] Connected to Franka arm")
     redis_store = redis.Redis()
     return State(franka, redis_store)
@@ -89,7 +98,7 @@ def __cmd_reset(state, timestamp):
     print_and_cr(f"[INFO] Resetting robot. Takes about 4 sec. Do not move ..")
     state.franka.reset()
     print_and_cr(f"[INFO] Franka is reset, sending our controller")
-    state.franka.connect(policy=state.franka.default_policy(1.0, 1.0))
+    state.franka.connect(policy=state.franka.default_policy())
     state.mode = 'idle'
     return None
 
@@ -194,6 +203,9 @@ def run_demo(callback_to_install_func=None, params={}):
     while not state.quit:
         state.robostate = np.array(state.franka.get_sensors_offsets(), dtype=CMD_DTYPE)
         redis_send_states(state.redis_store, state.robostate)
+
+        #if ts_counter % 40 == 0:
+        #    print_and_cr(f"{state.robostate}")
 
         if ts_counter % CMD_EVERY_ITER == 0:
 

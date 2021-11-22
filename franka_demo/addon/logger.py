@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue
 from time import strftime, localtime, sleep
 import numpy as np
 
-from franka_demo.demo_interfaces import print_and_cr
+from franka_demo.utils import print_and_cr, colors
 
 def add_logging_function(state):
     state.log_queue = Queue()
@@ -58,11 +58,13 @@ def start_logging(q):
         if folder_name is None: break
 
         file_handler = open(os.path.join(folder_name, 'log.csv'), 'a')
+        print_and_cr(f"{colors.bg.green}[LOGGING] Created log.csv in {folder_name}")
         idx = 0
         while True:
             new_items = q.get(block=True)
             if new_items is None:
                 file_handler.close()
+                print_and_cr(f"[LOGGING] Close log.csv in {folder_name}{colors.reset}")
                 break
             simple_save_items = new_items[:-1]
             for item in simple_save_items:
