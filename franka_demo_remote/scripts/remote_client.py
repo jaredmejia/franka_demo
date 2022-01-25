@@ -4,7 +4,7 @@ from time import time, sleep
 import redis
 from threading import Lock, Thread
 from time import time, sleep
-from franka_demo_remote.demo_interfaces import print_and_cr
+# from franka_demo_remote.demo_interfaces import print_and_cr
 from franka_demo_remote.getch import getch
 from franka_demo_remote.addon.camera import render_cam_state
 
@@ -22,7 +22,7 @@ class RemoteState(object):
 
 def receive_keyboard_cmd(state):
     # Keyboard Interface, running on a separate thread
-    print_and_cr("[INFO] Accepting keyboard commands, press 'h' for help.")
+    # print_and_cr("[INFO] Accepting keyboard commands, press 'h' for help.")
     res = getch()
     while res != 'q' and not state.quit: # Press q to quit
         if res in HANDLER_KEYS:
@@ -30,7 +30,7 @@ def receive_keyboard_cmd(state):
             # state.redis_store.set('processed', 0)
         sleep(0.01)
         res = getch()
-    print_and_cr("[INFO] Quitting the demo ...")
+    # print_and_cr("[INFO] Quitting the demo ...")
     state.quit = True
     redis_send_keyboardcmd(redis_store, 'q')
     # state.redis_store.set('processed', 0)
@@ -40,7 +40,7 @@ def redis_send_keyboardcmd(redis_store, keyboardcmd):
     redis_store.set(REDIS_KEYBOARD_KEY, keyboardcmd)
 
 if __name__ == "__main__":
-    HOST_IP = "127.0.0.1"
+    HOST_IP = "172.26.114.61"
     redis_store = redis.Redis(HOST_IP)
     state = RemoteState(redis_store)
 
@@ -52,5 +52,5 @@ if __name__ == "__main__":
 
     keyboard_thread.join()
     visual_thread.join()
-    print_and_cr("[INFO] Demo Closed")
+    # print_and_cr("[INFO] Demo Closed")
 

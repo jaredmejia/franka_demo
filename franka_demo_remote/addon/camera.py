@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import cv2
-import pyrealsense2 as rs
+# import pyrealsense2 as rs
 from PIL import Image
 from threading import Thread
 import queue
