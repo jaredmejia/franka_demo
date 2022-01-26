@@ -132,7 +132,7 @@ def update_camera(pipes, cam_state, state):
                 state.cam_counter[device_id].append(time.time()) # FOR DEBUG
                 if state.is_logging_to:
                     state.cam_recorder_queue.put((state.is_logging_to, i, device_id, color_image, color_timestamp, depth_image, depth_timestamp))
-        if all([CAM_KEYS[i] in cam_state.keys() for i in range(len(CAM_KEYS))]):
+        if state.params['remote'] and all([CAM_KEYS[i] in cam_state.keys() for i in range(len(CAM_KEYS))]):
             redis_send_frame(state.redis_store, cam_state)
         sleep_counter += 0.005
         time.sleep(max(0, sleep_counter - time.time()))

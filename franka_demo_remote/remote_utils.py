@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import cv2
+from franka_demo_remote.utils import print_and_cr
 
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
@@ -19,7 +20,7 @@ def redis_receive_frame(redis_store):
 
 def render_cam_state(state):
     """ Update camera info"""
-    print("rendering in progress.......")
+    print_and_cr("[INFO] Rendering in progress...")
     while not state.quit:
         cam_state = redis_receive_frame(state.redis_store)
         imgs_ti = []
