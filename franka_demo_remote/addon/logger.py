@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue
 from time import strftime, localtime, sleep
 import numpy as np
 
-from franka_demo_remote.utils import print_and_cr, colors
+from franka_demo.utils import print_and_cr, colors
 
 def add_logging_function(state):
     state.log_queue = Queue()
@@ -44,9 +44,9 @@ def _press_logging(key_pressed, state):
             state.log_folder,
             strftime('%y-%m-%d-%H-%M-%S', localtime())
         )
-        state.log_queue.put(new_log_path)
         os.mkdir(new_log_path)
         state.is_logging_to = new_log_path
+        state.log_queue.put(new_log_path)
 
         #if hasattr(state, 'cameras') and state.cameras is not None:
         #    state.cameras.start_logging(state)
@@ -57,14 +57,17 @@ def start_logging(q):
         folder_name = q.get(block=True)
         if folder_name is None: break
 
-        file_handler = open(os.path.join(folder_name, 'log.csv'), 'a')
+        try:
+            file_handler = open(os.path.join(folder_name, 'log.csv'), 'a')
+        except Exception as e:
+            print_and_cr(f"{colors.bg.red}Cannot open file for writing log?")
         print_and_cr(f"{colors.bg.green}[LOGGING] Created log.csv in {folder_name}")
         idx = 0
         while True:
             new_items = q.get(block=True)
             if new_items is None:
                 file_handler.close()
-                print_and_cr(f"[LOGGING] Close log.csv in {folder_name}{colors.reset}")
+                print_and_cr(f"{colors.reset}[LOGGING] Close log.csv in {folder_name}")
                 break
             simple_save_items = new_items[:-1]
             for item in simple_save_items:
@@ -77,7 +80,7 @@ def start_logging(q):
             if new_items[-1] is not None:
                 file_handler.write("-".join(map(str, new_items[-1])))
             else:
-                file_handler.write(new_items[-1])
+                file_handler.write('None')
             file_handler.write('\n')
             idx += 1
 

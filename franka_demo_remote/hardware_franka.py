@@ -87,16 +87,20 @@ class JointPDPolicy(toco.PolicyModule):
 
 class FrankaArm():
     CMD_SHAPE = 7
-    START_POSITION = np.array([-0.145, -0.67, -0.052, -2.3, 0.145, 1.13, 0.029])
-    JOINT_LIMIT_LOW = np.array([-2.8773, -1.7428, -2.8773, -3.0518, -2.8773, -1.5683, -3.6627])
-    JOINT_LIMIT_HIGH = np.array([2.8773, 1.7428, 2.8773, -0.0898, 2.8773, 2.1616, 2.0918])
+    # Notice that the start position will add joint offset before send to hdware
+    START_POSITION = np.array([-0.145, -0.67, -0.052, -2.3, 0.145, 1.13, 0.0])
+    # Notice that the joint limit is applied after applying joint offset
+    JOINT_LIMIT_MIN = np.array(
+        [-2.8773, -1.7428, -2.8773, -3.0018, -2.8773, 0.0025, -2.8773])
+    JOINT_LIMIT_MAX = np.array(
+        [2.8773, 1.7428, 2.8773, -0.1398, 2.8773, 3.7325, 2.8773])
 
     def __init__(self, name, ip_address, **kwargs):
         self.name = name
         self.robot = None
-        self.JOINT_OFFSET = torch.tensor(
+        self.JOINT_OFFSET = np.array(
             [0, 0, 0, 0, 0., np.pi/2, np.pi/4],
-            dtype=torch.float32) # TODO replace hardcode with config
+            dtype=np.float32) # TODO replace hardcode with config
 
         # Initialize self.robot interface
         self.robot = RobotInterface(
@@ -104,7 +108,7 @@ class FrankaArm():
             enforce_version=False,
         )
 
-    def default_policy(self, kq_ratio=1.0, kqd_ratio=1.0):
+    def default_policy(self, kq_ratio=1.5, kqd_ratio=1.5):
         q_initial = self.get_sensors().clone()
         kq = kq_ratio * torch.Tensor(self.robot.metadata.default_Kq)
         kqd = kqd_ratio * torch.Tensor(self.robot.metadata.default_Kqd)
@@ -156,13 +160,15 @@ class FrankaArm():
 
     def apply_commands_offsets(self, q_desired):
         """Apply hardware commands (apply offset)"""
-        if np.any(np.logical_or(q_desired < self.JOINT_LIMIT_LOW, q_desired > self.JOINT_LIMIT_HIGH)):
-            sys.stdout.write(f"Command outside joint limit {q_desired}\r\n")
-            np.clip(q_desired,
-                self.JOINT_LIMIT_LOW,
-                self.JOINT_LIMIT_HIGH,
-                out=q_desired)
-        q_des_tensor = torch.tensor(q_desired) + self.JOINT_OFFSET
+        #if np.any(np.logical_or(q_desired < self.JOINT_LIMIT_LOW, q_desired > self.JOINT_LIMIT_HIGH)):
+        #    sys.stdout.write(f"Command outside joint limit {q_desired}\r\n")
+        #    np.clip(q_desired,
+        #        self.JOINT_LIMIT_LOW,
+        #        self.JOINT_LIMIT_HIGH,
+        #        out=q_desired)
+        q_des_tensor = np.array(q_desired) + self.JOINT_OFFSET
+        q_des_tensor = torch.tensor(np.clip(
+            q_des_tensor, self.JOINT_LIMIT_MIN, self.JOINT_LIMIT_MAX))
         #print('RAW_CMD_DIFF', q_des_tensor.float() - self.robot.get_joint_angles())
         self.robot.update_current_policy({"q_desired": q_des_tensor.float()})
 
@@ -217,8 +223,6 @@ def get_args():
                         type=str,
                         help="IP address or hostname of the franka server",
                         default="172.16.0.1") # 10.0.0.123 # "169.254.163.91",
-    parser.add_argument("-r", "--remote",
-                    action='store_true') 
     return parser.parse_args()
 
 
