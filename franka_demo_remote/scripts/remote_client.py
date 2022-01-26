@@ -6,7 +6,7 @@ from threading import Lock, Thread
 from time import time, sleep
 # from franka_demo_remote.demo_interfaces import print_and_cr
 from franka_demo_remote.getch import getch
-from franka_demo_remote.addon.camera import render_cam_state
+from franka_demo_remote.remote_utils import render_cam_state
 
 REDIS_KEYBOARD_KEY = "franka-cmd"
 REDIS_KEYBOARD_DUMMY_KEY = "-"
