@@ -223,6 +223,8 @@ def get_args():
                         type=str,
                         help="IP address or hostname of the franka server",
                         default="172.16.0.1") # 10.0.0.123 # "169.254.163.91",
+    parser.add_argument("-r", "--remote",
+                action='store_true') 
     return parser.parse_args()
 
 
