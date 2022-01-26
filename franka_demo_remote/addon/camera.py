@@ -40,6 +40,12 @@ class RealSense:
             self.device_ls.append(cam.get_info(rs.camera_info(1)))
         self.device_ls.sort()
 
+        desired_device_ls = ["101622070870", "815412070907", "818312070212"]
+        for device in desired_device_ls:
+            assert(device in self.device_ls)
+
+        self.device_ls = desired_device_ls
+
         # Start streaming
         print_and_cr(f"Connecting to RealSense cameras ({len(self.device_ls)} found) ...")
         self.pipes = []
@@ -151,7 +157,8 @@ def render_cam_state(state):
             imgs_ti.append(color_image)
         stacked_imgs_ti = np.hstack(imgs_ti)
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-        img = cv2.resize(stacked_imgs_ti, (CAM_WIDTH * len(CAM_KEYS) * 2, CAM_HEIGHT * 2)) ## show twice as big 
+        # img = cv2.resize(stacked_imgs_ti, (CAM_WIDTH * len(CAM_KEYS) * 2, CAM_HEIGHT * 2)) ## show twice as big 
+        img = cv2.resize(stacked_imgs_ti, (CAM_WIDTH * len(CAM_KEYS), CAM_HEIGHT)) ## show twice as big 
         cv2.imshow('RealSense', img)
         # cv2.resizeWindow('RealSense', 2000, 2000)
         cv2.waitKey(1)
