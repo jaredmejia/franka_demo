@@ -115,7 +115,7 @@ def __cmd_start(state, timestamp):
     return clipped_cmd
 
 def _press_help(key_pressed, state):
-    print_and_cr("Keypress Handlers:")
+    print_and_cr("Keypress Handlers:") 
     keys = sorted(state.handlers.keys())
     for k in keys:
         print_and_cr("\t%s - %s" % (k, state.handlers[k].__name__.replace("press","").replace("_", " ").strip()))
@@ -139,14 +139,16 @@ def keyboard_proc(state, remote=False):
             res = getch()
         if res != REDIS_KEYBOARD_DUMMY_KEY:
             state.redis_store.set(REDIS_KEYBOARD_KEY, REDIS_KEYBOARD_DUMMY_KEY)
-            if res in state.handler_keys:
-                print_and_cr(f"[REDISKEY] Received {res}")
-                state.handlers[res](res, state)
-            elif res == 'q':
-                print_and_cr(f"[INFO] Received redis key to quit")
-                state.quit = True
-            else:
-                print_and_cr(f"[WARNING] Invalid redis command {res}")
+        else:
+            res = getch()
+        if res in state.handler_keys:
+            print_and_cr(f"[REDISKEY] Received {res}")
+            state.handlers[res](res, state)
+        elif res == 'q':
+            print_and_cr(f"[INFO] Received redis key to quit")
+            state.quit = True
+        else:
+            print_and_cr(f"[WARNING] Invalid redis command {res}")
         sleep(0.01)
     print_and_cr("[INFO] Quitting the demo ...")
     state.quit = True
