@@ -19,6 +19,9 @@ if __name__ == "__main__":
 
     run_demo(callback_func, params={
         'ip_address': args.server_ip,
-        'log_folder': 'logs',
-        'replay_filename': 'franka_demo_remote/logs/21-10-14-19-50-07.csv'
+        'log_folder': 'logs/',
+        'replay_filename': '/home/gaoyue/dev/franka_learning/4-28-scooping-red-front-center-mints.pkl',
+        'gripper': False,
+        'remote': False,
+        'velocity': True
     })

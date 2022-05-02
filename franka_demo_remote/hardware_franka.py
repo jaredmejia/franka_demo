@@ -6,6 +6,7 @@
 # ------------------------------------------------------------------------------
 # Base robot class for other hardware devices to inheret from
 import abc
+from random import random
 
 class hardwareBase(abc.ABC):
     def __init__(self, name, *args, **kwargs):
@@ -61,7 +62,7 @@ class JointPDPolicy(toco.PolicyModule):
 
     def __init__(self, desired_joint_pos, kq, kqd, **kwargs):
         """
-        Args:
+        Args:black
             desired_joint_pos (int):    Number of steps policy should execute
             hz (double):                Frequency of controller
             kq, kqd (torch.Tensor):     PD gains (1d array)
@@ -88,7 +89,13 @@ class JointPDPolicy(toco.PolicyModule):
 class FrankaArm():
     CMD_SHAPE = 7
     # Notice that the start position will add joint offset before send to hdware
-    START_POSITION = np.array([-0.145, -0.67, -0.052, -2.3, 0.145, 1.13, 0.0])
+    START_POSITION = np.array([0.1828, -0.4909, -0.0093, -2.4412, 0.2554, 0.3310, 0.0])
+    # Close left [ 0.19719838, -0.31133446,  0.63921565, -2.27884555,  0.26551878, 0.49570596,  0.58121759]
+    # Close righ [-0.3159813 , -0.38090691, -0.44509837, -2.32920551, -0.72878891, 0.57118762, -1.82918906]
+    # Far ottom  [0.24321331,  0.426597  ,  0.30724603, -1.75327575, -0.09180571, 0.78220975, -1.18756342]
+    # Fright top [-0.25507489,  0.13030759, -0.27166939, -1.68428528, -0.64755744, 0.55247104, -0.58670473
+    # np.array(  [0.1828, -0.4909, -0.0093, -2.4412, 0.2554, 0.3310, 0.0]
+    # np.array(  [-0.145, -0.67, -0.052, -2.3, 0.145, 1.13, 0.0])
     # Notice that the joint limit is applied after applying joint offset
     JOINT_LIMIT_MIN = np.array(
         [-2.8773, -1.7428, -2.8773, -3.0018, -2.8773, 0.0025, -2.8773])
@@ -142,11 +149,12 @@ class FrankaArm():
 
     def reset(self):
         """Reset hardware"""
+        #self.robot.set_home_pose(torch.tensor(random_pose))
         self.robot.go_home()
 
     def get_sensors(self):
         """Get hardware sensors"""
-        return self.robot.get_joint_angles()
+        return self.robot.get_joint_positions()
 
     def apply_commands(self, q_desired):
         """Apply hardware commands"""
@@ -155,7 +163,7 @@ class FrankaArm():
 
     def get_sensors_offsets(self):
         """Get hardware sensors (apply offset)"""
-        joint_angle = self.robot.get_joint_angles()
+        joint_angle = self.robot.get_joint_positions()
         return joint_angle - self.JOINT_OFFSET
 
     def apply_commands_offsets(self, q_desired):
@@ -169,22 +177,23 @@ class FrankaArm():
         q_des_tensor = np.array(q_desired) + self.JOINT_OFFSET
         q_des_tensor = torch.tensor(np.clip(
             q_des_tensor, self.JOINT_LIMIT_MIN, self.JOINT_LIMIT_MAX))
-        #print('RAW_CMD_DIFF', q_des_tensor.float() - self.robot.get_joint_angles())
+        #print('RAW_CMD_DIFF', q_des_tensor.float() - self.robot.get_joint_positions())
         self.robot.update_current_policy({"q_desired": q_des_tensor.float()})
 
     def __del__(self):
         self.close()
 
-from .hardware_gripper import Gripper
+from franka_demo_remote.hardware_gripper import Gripper
 
 class FrankaArmWithGripper(FrankaArm):
     CMD_SHAPE = 8
+    STATE_SHAPE = 8
     START_POSITION = np.array(list(FrankaArm.START_POSITION) + [0.08], dtype=np.float32)
 
     def __init__(self, name, ip_address, **kwargs):
         super(FrankaArmWithGripper, self).__init__(name, ip_address, **kwargs)
         self.gripper = Gripper(ip_address)
-        self.state_nparray = np.zeros(self.CMD_SHAPE)
+        self.state_nparray = np.zeros(self.STATE_SHAPE)
 
     def reset(self):
         self.open_gripper()
@@ -199,7 +208,7 @@ class FrankaArmWithGripper(FrankaArm):
     def get_sensors_offsets(self):
         """Get hardware sensors (apply offset)"""
         self.state_nparray[0:7] = super(FrankaArmWithGripper, self).get_sensors_offsets()
-        self.state_nparray[-1] = self.gripper.get()
+        self.state_nparray[7] = self.gripper.get()
         return self.state_nparray
 
     def apply_commands_offsets(self, q_desired):
@@ -213,6 +222,23 @@ class FrankaArmWithRobotiQGripper(FrankaArmWithGripper):
         super(FrankaArmWithRobotiQGripper, self).__init__(name, ip_address, **kwargs)
         self.JOINT_OFFSET[6] -= np.pi/4
 
+class FrankaArmIncludeJointVel(FrankaArm):
+
+    STATE_SHAPE = 14 # 7 jointpos, 7 joint vel
+
+    def __init__(self, name, ip_address, **kwargs):
+        super(FrankaArmIncludeJointVel, self).__init__(name, ip_address, **kwargs)
+        self.state_nparray = np.zeros(self.STATE_SHAPE)
+
+    # NOTE: don't define get_sensors, it is meant to ONLY return pos information
+    # so we can initialize the default policy correctly.
+
+    def get_sensors_offsets(self):
+        """Get hardware sensors (apply offset)"""
+        # super(FrankaArmIncludeJointVel, self).get_sensors_offsets()
+        self.state_nparray[0:7] = super(FrankaArmIncludeJointVel, self).get_sensors_offsets()
+        self.state_nparray[7:14] = self.robot.get_joint_velocities()
+        return self.state_nparray
 
 # Get inputs from user
 def get_args():
@@ -251,7 +277,9 @@ if __name__ == "__main__":
     print(f"Took {time.time() - start} sec to go home and set policy")
 
     q_initial = franka.get_sensors_offsets()
-    q_desired = np.array(q_initial, dtype=np.float64)
+    # q_desired = np.array(q_initial, dtype=np.float64)
+    q_desired = np.zeros(franka.CMD_SHAPE)
+    q_desired[:] = q_initial[:len(q_desired)]
     print(f"Shape of q_desired: {list(q_desired.shape)}")
     print(f"Starting sine motion updates... will repeat for {time_to_go} seconds")
 

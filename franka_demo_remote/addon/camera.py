@@ -14,7 +14,7 @@ from franka_demo_remote.remote_utils import redis_send_frame
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
 CAM_FPS = 30
-CAM_KEYS = ["cam0c", "cam1c", "cam2c"]
+CAM_KEYS = ["cam0c"]
 FRAME_TYPE = np.uint8
 NUM_WRITERS = 8
 
@@ -41,7 +41,7 @@ class RealSense:
             self.device_ls.append(cam.get_info(rs.camera_info(1)))
         self.device_ls.sort()
 
-        desired_device_ls = ["101622070870", "815412070907", "818312070212"]
+        desired_device_ls = ["818312070212"]
         for device in desired_device_ls:
             assert(device in self.device_ls)
 

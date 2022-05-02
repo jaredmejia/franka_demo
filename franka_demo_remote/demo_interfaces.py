@@ -11,7 +11,7 @@ from threading import Lock, Thread
 from time import time, sleep
 
 from multiprocessing import Process
-from franka_demo_remote.hardware_franka import FrankaArm, FrankaArmWithGripper, FrankaArmWithRobotiQGripper, JointPDPolicy
+from franka_demo_remote.hardware_franka import FrankaArm, FrankaArmWithGripper, FrankaArmWithRobotiQGripper, FrankaArmIncludeJointVel, JointPDPolicy
 from franka_demo_remote.hardware_dummy import DummyFrankaArm
 from franka_demo_remote.utils import print_and_cr
 
@@ -52,16 +52,21 @@ class State(object):
         self._mutex.release()
 
     def redis_receive_command(self):
-        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(8))[:self.cmd_shape]
+        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(8))[:self.cmd_shape] # TODO: dim=7 or 8 should depend on gripper
 
-def init_robot(ip_address, gripper):
+def init_robot(ip_address, gripper=True, velocity=False):
     print_and_cr(f"[INFO] Try connecting to Franka robot at {ip_address} ...")
     if ip_address == "0":
+        assert velocity is False
         franka = DummyFrankaArm(name="Dummy", ip_address=None)
-    elif gripper == False:
+    elif gripper == False and velocity == False:
         franka = FrankaArm(name="Franka-Demo", ip_address=ip_address)
-    else:
+    elif gripper == False and velocity:
+        franka = FrankaArmIncludeJointVel(name="Franka-Gripper-Vel", ip_address=ip_address)
+    elif gripper == True and velocity == False:
         franka = FrankaArmWithRobotiQGripper(name="Franka-Demo-Gripper", ip_address=ip_address)
+    else:
+        raise NotImplementedError
     franka.reset()
     franka.connect(policy=franka.default_policy())
     print_and_cr(f"[INFO] Connected to Franka arm")
@@ -101,12 +106,21 @@ def _press_idle(key_pressed, state):
     state.mode = 'idle'
     print_and_cr("Enter idle mode")
 
+    if state.is_logging_to:
+        state.handlers['l']('l', state) # force exit log
+
 def __cmd_idle(state, timestamp):
     return None
 
 def _press_start(key_pressed, state):
     state.mode = 'start'
     print_and_cr("Return to home position.")
+    #min_positions = [-0.25, -0.4, -0.4, -2.4, -0.7, 0.3, -1.5]
+    #max_positions = [0.25, 0.4, 0.6, -1.7, 0.25, 1.0, 0.5]
+    min_positions = [-0.18, -0.2, -0.3, -2.1, -0.25, 0.2, -1.0]
+    max_positions = [0.18, 0.2, 0.3, -1.75, 0.15, 0.75, 1.0]
+    state.franka.START_POSITION = [np.random.uniform(low=min_positions[i], high=max_positions[i]) for i in range(len(min_positions))]
+    print("Resetting to random pose:",state.franka.START_POSITION)
 
 def __cmd_start(state, timestamp):
     clipped_cmd = np.clip(state.franka.START_POSITION,
@@ -155,7 +169,8 @@ def keyboard_proc(state, remote=False):
 def run_demo(callback_to_install_func=None, params={}):
     # Command thread
     if 'gripper' not in params: params['gripper'] = True
-    state = init_robot(params['ip_address'], params['gripper'])
+    if 'velocity' not in params: params['velocity'] = False
+    state = init_robot(params['ip_address'], params['gripper'], params['velocity'])
 
     handlers = {}   # Handle key pressing event
     modes = {}      # Generate command depending on the mode
@@ -186,6 +201,7 @@ def run_demo(callback_to_install_func=None, params={}):
     state.mode_keys = state.modes.keys()
 
     keyboard_thread = Thread(target=keyboard_proc, name='Keyboard Thread', args=(state, state.params['remote']))
+    state.keyboard_thread = keyboard_thread
     keyboard_thread.start()
 
     ts = time()
@@ -233,7 +249,7 @@ def run_demo(callback_to_install_func=None, params={}):
 
             if state.is_logging_to:
                 state.log_queue.put((
-                    time(), state.robostate, command, cam_data
+                    time(), state.robostate, command, None, cam_data # None in place for reward
                 ))
 
         ts_counter += 1
