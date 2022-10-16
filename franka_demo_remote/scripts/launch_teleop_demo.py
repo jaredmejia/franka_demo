@@ -5,12 +5,13 @@ from time import time, sleep
 from franka_demo_remote.hardware_franka import get_args
 from franka_demo_remote.demo_interfaces import run_demo
 from franka_demo_remote.addon import add_teleop_function, add_logging_function, \
-    add_camera_function, add_rediskey_function, add_sinwave_function
+    add_camera_function, add_audio_function, add_rediskey_function, add_sinwave_function
 
 def callback_func(state):
     add_teleop_function(state)
     add_logging_function(state)
     add_camera_function(state)
+    add_audio_function(state)
     add_rediskey_function(state)
     add_sinwave_function(state)
 

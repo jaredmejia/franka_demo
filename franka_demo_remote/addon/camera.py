@@ -23,12 +23,23 @@ def add_camera_function(state):
     state.cam_recorder_queue = MPQueue()
     state.cam_recorder_proc = Process(
         target=record_camera,
-        args=(state.cam_recorder_queue, NUM_WRITERS)).start()
+        args=(state.cam_recorder_queue, NUM_WRITERS-1)).start()
 
     state.cameras = RealSense(state)
     state.onclose.append(close_cameras)
     state.handlers['C'] = debug_update_camera_fps              # FOR DEBUG
     state.handlers['D'] = debug_camera_connection               # FOR DEBUG
+
+
+def add_audio_function(state):
+    state.is_logging_to = None
+    state.audio_recorder_queue = MPQueue()
+    state.audio_recorder_proc = Process(
+        target=record_audio,
+        args=(state.audio_recorder_queue, 1)
+    ).start()
+    state.onclose.append(close_audio)
+
 
 class RealSense:
     """ Wrapper that implements boilerplate code for RealSense cameras """
@@ -135,8 +146,10 @@ def update_camera(pipes, cam_state, state):
                 cam_state[f"cam{i}c"] = (color_image, color_timestamp)
                 cam_state[f"cam{i}d"] = (depth_image, depth_timestamp)
                 state.cam_counter[device_id].append(time.time()) # FOR DEBUG
+
                 if state.is_logging_to:
                     state.cam_recorder_queue.put((state.is_logging_to, i, device_id, color_image, color_timestamp, depth_image, depth_timestamp))
+       
         if state.params['remote'] and all([CAM_KEYS[i] in cam_state.keys() for i in range(len(CAM_KEYS))]):
             redis_send_frame(state.redis_store, cam_state)
         sleep_counter += 0.005
@@ -155,13 +168,13 @@ def update_audio(pipes, cam_state, state):
     #align = rs.align(align_to)
     cam_state["audio"] = 'start'
     # cam_state["audio"] = ['start', 'start']
+
     print_and_cr("[INFO] Streaming audio")
     SAMPLE_BLOCK_BYTES = 256*2+2
     NEWLINE = b'\r\n'
-    PORT = '/dev/ttyACM0'
+    PORT = '/dev/ttyACM1'
     ser = serial.Serial(PORT)
     ser_bytes = ser.read_until(b'\r\n')
-    
     while True:
         try:
             if ser.in_waiting:
@@ -179,6 +192,9 @@ def update_audio(pipes, cam_state, state):
                         timestamp = ctime.strftime("%H.%M.%S.%f")
                         cam_state["audio"] = (ser_ints, timestamp)
                         # cam_state["audio"].append((ser_ints, timestamp))
+                        if state.is_logging_to:
+                            state.audio_recorder_queue.put((state.is_logging_to, ser_ints, timestamp))
+
                 else:
                     timestamp = ctime.strftime("%H.%M.%S.%f")
                     print("Packet Error at timestamp: ")
@@ -261,6 +277,42 @@ def record_camera(proc_queue, num_writers):
         thread.join()
 
 
+def audio_writer(q):
+    while True:
+        fn, ser_ints, timestamp = q.get()
+        if isinstance(fn, int):
+            break
+        with open(fn, 'a') as f:
+            for item in ser_ints:
+                f.write(timestamp)
+                f.write(" %i %i %i %i\n" % item)
+        
+
+def record_audio(proc_queue, num_writers):
+    """Process audio data and use threads to write to disk"""
+    writer_queue = queue.Queue()
+    my_threads = []
+    for _ in range(num_writers):
+        t = Thread(target=audio_writer, args=(writer_queue,))
+        t.start()
+        my_threads.append(t)
+
+    while True:
+        item = proc_queue.get()
+        if item is None:
+            print_and_cr(f"Quitting audio recording")
+            break
+
+        fn_prefix, ser_ints, timestamp = item
+        fn = f'{fn_prefix}.txt'
+        writer_queue.put((fn, ser_ints, timestamp))
+
+        for _ in range(num_writers):
+            writer_queue.put((-1, -1, -1))
+        for thread in my_threads:
+            thread.join()
+
+
 def debug_update_camera_fps(key_pressed, state):
     """ Print the FPS for each camera"""
     for device_id in state.cameras.device_ls:
@@ -296,6 +348,11 @@ def close_cameras(state):
     state.cam_recorder_queue.close()
     state.cam_recorder_queue.join_thread()
     state.cameras.pull_thread.join() # (Optional for daemon=True threads)
+
+def close_audio(state):
+    state.audio_recorder_queue.put(None)
+    state.audio_recorder_queue.close()
+    state.audio_recorder_queue.join_thread()
 
 
 if __name__ == "__main__":
