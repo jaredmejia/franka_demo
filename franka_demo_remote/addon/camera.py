@@ -14,7 +14,7 @@ from franka_demo_remote.remote_utils import redis_send_frame
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
 CAM_FPS = 30
-CAM_KEYS = ["cam0c"]
+CAM_KEYS = ["cam0c", "audio"]
 FRAME_TYPE = np.uint8
 NUM_WRITERS = 8
 
@@ -41,7 +41,7 @@ class RealSense:
             self.device_ls.append(cam.get_info(rs.camera_info(1)))
         self.device_ls.sort()
 
-        desired_device_ls = ["818312070212"]
+        desired_device_ls = ["031222070082"]#"818312070212"]
         for device in desired_device_ls:
             assert(device in self.device_ls)
 
@@ -74,12 +74,17 @@ class RealSense:
                                   args=(self.pipes, self.cam_state, state),
                                   daemon=True)
         self.pull_thread.start()
-
+        print_and_cr(f"[INFO] Camera setup completed.")
+        # Keep polling for audio in a background thread
+        self.pull_thread2 = Thread(target=update_audio, name="Update audio",
+                                   args=(self.pipes, self.cam_state, state),
+                                   daemon=True)
+        self.pull_thread2.start()
         # self.visual_thread = Thread(target=render_cam_state, name="Render camera states",
         #                           args=[state])
         # self.visual_thread.start()
 
-        print_and_cr(f"[INFO] Camera setup completed.")
+        
 
     def get_num_cameras(self):
         return len(self.device_ls)
@@ -136,7 +141,56 @@ def update_camera(pipes, cam_state, state):
             redis_send_frame(state.redis_store, cam_state)
         sleep_counter += 0.005
         time.sleep(max(0, sleep_counter - time.time()))
-        
+
+#############################################################################
+
+
+import serial
+import struct
+import time, sys
+import serial.tools.list_ports
+import datetime
+def update_audio(pipes, cam_state, state):
+    #align_to = rs.stream.color
+    #align = rs.align(align_to)
+    cam_state["audio"] = 'start'
+    # cam_state["audio"] = ['start', 'start']
+    print_and_cr("[INFO] Streaming audio")
+    SAMPLE_BLOCK_BYTES = 256*2+2
+    NEWLINE = b'\r\n'
+    PORT = '/dev/ttyACM0'
+    ser = serial.Serial(PORT)
+    ser_bytes = ser.read_until(b'\r\n')
+    
+    while True:
+        try:
+            if ser.in_waiting:
+                ser_bytes = ser.read(SAMPLE_BLOCK_BYTES)
+                ctime = datetime.datetime.now()
+ 
+                # confirm that it is the full packet 
+                if ser_bytes[-2:] == NEWLINE:
+                    # remove newline 
+                    ser_bytes = ser_bytes[:-2]
+                    # confirm again that the packet is the correct length
+                    if len(ser_bytes) == SAMPLE_BLOCK_BYTES-2:
+                        ser_ints = list(struct.iter_unpack('<HHHH', ser_bytes))
+                        # ser_ints is a 4 x (SAMPLE_BLOCK_BYTES)/4 list
+                        timestamp = ctime.strftime("%H.%M.%S.%f")
+                        cam_state["audio"] = (ser_ints, timestamp)
+                        # cam_state["audio"].append((ser_ints, timestamp))
+                else:
+                    timestamp = ctime.strftime("%H.%M.%S.%f")
+                    print("Packet Error at timestamp: ")
+                    print(timestamp) 
+                    ser_bytes = ser.read_until(b'\r\n')
+        except:
+            print("Keyboard Interrupt")
+            break
+
+
+
+############################################################################
 #### moved to a separate file ####
 # def redis_send_frame(redis_store, cam_state):
 #     for key in CAM_KEYS:
@@ -195,9 +249,9 @@ def record_camera(proc_queue, num_writers):
             f"{fn_prefix}/c{idx}-{device_id}-{color_timestamp}-color.jpeg",
             color_im
         ))
-        depth_im = Image.fromarray(depth_image.astype(np.uint8))
+        depth_im = Image.fromarray(depth_image.astype(np.uint16))
         writer_queue.put((
-            f"{fn_prefix}/c{idx}-{device_id}-{depth_timestamp}-depth.jpeg",
+            f"{fn_prefix}/c{idx}-{device_id}-{depth_timestamp}-depth.png",
             depth_im
         ))
 

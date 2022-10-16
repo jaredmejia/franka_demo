@@ -23,10 +23,12 @@ def _press_replay(key_pressed, state):
         print_and_cr(f"[ERROR] Cannot find the file for replay at {state.params['replay_filename']}")
         return
     try:
+	print_and_cr('begin')
         state.replay_openloop = (key_pressed == 'o')
         state.replay_delta = ('delta' in replay_filename)
         if not state.replay_openloop and state.replay_delta:
-            print_and_cr(f"[INFO] Close-loop replay delta-traj is equivalent to close-loop replay abs")
+            print_and_cr('in if')
+	    print_and_cr(f"[INFO] Close-loop replay delta-traj is equivalent to close-loop replay abs")
             state.replay_delta = False
         state.replay_commands, state.replay_start_state = load_pickle_commands(
             replay_filename,
@@ -43,8 +45,11 @@ def _press_replay(key_pressed, state):
 
 
 def __cmd_replay(state, timestamp):
+    print('enter cmd replay')
     if state.replay_counter == state.replay_commands_length:
+	print('first if statement')
         if state.is_logging_to is not None:
+	print('state.is_logging_to')
             # state.log_queue.put(None)
             # reward = input("Enter reward for traj: ")
             # state.log_queue.put((None, None, None, str(reward), None))
@@ -54,12 +59,13 @@ def __cmd_replay(state, timestamp):
             # state.handlers['p']('p', state) #hack
         return None
     if state.replay_counter == 0:
-        print(state.robostate[:7] - state.replay_start_state)
-        upper = state.CMD_DELTA_HIGH/5
-        lower = state.CMD_DELTA_LOW/5
+	#print('replay counter =0')
+        #print(state.robostate[:7] - state.replay_start_state)
+        upper = state.CMD_DELTA_HIGH#5
+        lower = state.CMD_DELTA_LOW#5
         # upper[:-1] = upper[:-1]/5
         # lower[:-1] = lower[:-1]/5
-        if not np.all(np.isclose(state.robostate[:7], state.replay_start_state, atol=2e-1)):
+        if not np.all(np.isclose(state.robostate[:7], state.replay_start_state, atol=5e-1)):
         # if np.linalg.norm(state.robostate[:8] - state.replay_start_state) > 0.8:
             cmd = np.clip(state.replay_start_state,
                 state.robostate[:7] + lower,
@@ -69,14 +75,16 @@ def __cmd_replay(state, timestamp):
             if not state.is_logging_to:
                 state.handlers['l']('l', state) # force enter log
     cmd = state.replay_commands[state.replay_counter]
-    cmd += np.random.standard_normal(size=cmd.shape) * 0.005 # Was .005
+    cmd += np.random.standard_normal(size=cmd.shape) * 0.005 # Noise addition! Was .005
     if state.replay_delta:
         cmd += state.robostate[:7]
     state.replay_counter += 1
     return cmd
 def load_pickle_commands(replay_filename, is_openloop):
+    print('load pickle')
     with open(replay_filename, 'rb') as f:
         paths = pickle.load(f)
+    print('got path')
     # sample_path_idx = np.random.choice(len(paths), size=1)[0]
     sample_path_idx = 0
     print_and_cr(f"[INFO] Sample replay path idx {sample_path_idx}")

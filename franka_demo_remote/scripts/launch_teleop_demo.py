@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     run_demo(callback_func, params={
         'ip_address': args.server_ip,
-        'log_folder': 'logs/4-28-scooping-red-back-cemter-mints',
+        'log_folder': 'logs',
         'remote': args.remote,
         'gripper': False,
     })

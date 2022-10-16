@@ -10,7 +10,8 @@ FRAME_TYPE = np.uint8
 
 def redis_send_frame(redis_store, cam_state):
     for key in CAM_KEYS:
-        redis_store.set(key, cam_state[key][0].tobytes())
+        if key in cam_state:
+            redis_store.set(key, cam_state[key][0].tobytes())
 
 def redis_receive_frame(redis_store):
     cam_state = {}

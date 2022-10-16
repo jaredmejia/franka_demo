@@ -52,7 +52,7 @@ class State(object):
         self._mutex.release()
 
     def redis_receive_command(self):
-        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).reshape(8))[:self.cmd_shape] # TODO: dim=7 or 8 should depend on gripper
+        return np.array(np.frombuffer(self.redis_store.get(REDIS_CMD_KEY), dtype=CMD_DTYPE).squeeze())[:self.cmd_shape] # TODO: dim=7 or 8 should depend on gripper
 
 def init_robot(ip_address, gripper=True, velocity=False):
     print_and_cr(f"[INFO] Try connecting to Franka robot at {ip_address} ...")
@@ -119,8 +119,11 @@ def _press_start(key_pressed, state):
     #max_positions = [0.25, 0.4, 0.6, -1.7, 0.25, 1.0, 0.5]
     min_positions = [-0.18, -0.2, -0.3, -2.1, -0.25, 0.2, -1.0]
     max_positions = [0.18, 0.2, 0.3, -1.75, 0.15, 0.75, 1.0]
-    state.franka.START_POSITION = [np.random.uniform(low=min_positions[i], high=max_positions[i]) for i in range(len(min_positions))]
-    print("Resetting to random pose:",state.franka.START_POSITION)
+    # state.franka.START_POSITION = [np.random.uniform(low=min_positions[i], high=max_positions[i]) for i in range(len(min_positions))]
+    # state.franka.START_POSITION = [-0.173801, -0.03525608,  0.03951151, -1.84207726, -0.07716725,  0.22404873, 1.00803947]
+    state.franka.START_POSITION = [ 0.1420,  0.6130, -0.1899, -0.6505,  0.0947, -0.3041,  0.5220]
+    #[0.18, 0.2, 0.3, -1.75, 0.15, 0.75, 1.0] # TODO put home position here
+    print("Resetting to start pose:",state.franka.START_POSITION)
 
 def __cmd_start(state, timestamp):
     clipped_cmd = np.clip(state.franka.START_POSITION,
@@ -212,6 +215,9 @@ def run_demo(callback_to_install_func=None, params={}):
 
     while not state.quit:
         state.robostate = np.array(state.franka.get_sensors_offsets(), dtype=CMD_DTYPE)
+        #print(state.robostate)
+        #print(state.redis_store)
+        state.audio = 'Test'
         redis_send_states(state.redis_store, state.robostate)
 
         #if ts_counter % 40 == 0:
