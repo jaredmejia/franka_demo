@@ -307,10 +307,10 @@ def record_audio(proc_queue, num_writers):
         fn = f'{fn_prefix}.txt'
         writer_queue.put((fn, ser_ints, timestamp))
 
-        for _ in range(num_writers):
-            writer_queue.put((-1, -1, -1))
-        for thread in my_threads:
-            thread.join()
+    for _ in range(num_writers):
+        writer_queue.put((-1, -1, -1))
+    for thread in my_threads:
+        thread.join()
 
 
 def debug_update_camera_fps(key_pressed, state):
