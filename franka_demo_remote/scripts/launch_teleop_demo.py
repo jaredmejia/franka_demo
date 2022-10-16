@@ -11,7 +11,6 @@ def callback_func(state):
     add_teleop_function(state)
     add_logging_function(state)
     add_camera_function(state)
-    add_audio_function(state)
     add_rediskey_function(state)
     add_sinwave_function(state)
 

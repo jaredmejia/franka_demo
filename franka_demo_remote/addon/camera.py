@@ -25,20 +25,17 @@ def add_camera_function(state):
         target=record_camera,
         args=(state.cam_recorder_queue, NUM_WRITERS-1)).start()
 
-    state.cameras = RealSense(state)
-    state.onclose.append(close_cameras)
-    state.handlers['C'] = debug_update_camera_fps              # FOR DEBUG
-    state.handlers['D'] = debug_camera_connection               # FOR DEBUG
-
-
-def add_audio_function(state):
-    state.is_logging_to = None
     state.audio_recorder_queue = MPQueue()
     state.audio_recorder_proc = Process(
         target=record_audio,
         args=(state.audio_recorder_queue, 1)
     ).start()
+
+    state.cameras = RealSense(state)
     state.onclose.append(close_audio)
+    state.onclose.append(close_cameras)
+    state.handlers['C'] = debug_update_camera_fps              # FOR DEBUG
+    state.handlers['D'] = debug_camera_connection               # FOR DEBUG
 
 
 class RealSense:
