@@ -75,7 +75,7 @@ for demo in sorted(name_of_demos):
                     else np.nan
                 )
                 if args.include_depth:
-                    dimage_fn = f"c{i}-{cam_id}-{datapoint[i*2+1]}-depth.jpeg"
+                    dimage_fn = f"c{i}-{cam_id}-{datapoint[i*2+1]}-depth.png"
                     depth_cam_fn[i].append(dimage_fn
                         if os.path.isfile(os.path.join(demo, dimage_fn))
                         else np.nan
